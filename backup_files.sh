@@ -1,7 +1,8 @@
 #!/bin/bash
 
+
 function startupChecks() {
-    errorMessage="Usage: [-c] dir_trabalho dir_backup"
+    local errorMessage="Usage: $0 [-c] dir_trabalho dir_backup"
     if [[ $# -lt 2 ]]; then
         echo "$errorMessage"
         exit 1  
@@ -14,24 +15,34 @@ function startupChecks() {
 
 
     if [[ $# -eq 3 && $1 == "-c" ]]; then
-        CHECK=1
-    else
         CHECK=0
+    else
+        CHECK=1
     fi
 
     #echo $CHECK
 
 
-    if [[ $CHECK -eq 1 ]]; then
-        DIRTRABALHO="$2"
-        DIRBACKUP="$3"
-        [[ -d $DIRTRABALHO ]] || { echo "$errorMessage"; exit 1; }    
-        [[ -d $DIRBACKUP ]] || { echo "$errorMessage"; exit 1; }           
+    if [[ "$CHECK" ]]; then
+        WORK_DIR="$2"
+        BACKUP_DIR="$3"
+        [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
+        if [[ ! -d "$BACKUP_DIR" ]]; then
+            echo "mkdir -p $BACKUP_DIR"
+            if [[ "$CHECK" ]]; then
+                mkdir -p "$BACKUP_DIR"
+            fi
+        fi          
     else
-        DIRTRABALHO="$1"
-        DIRBACKUP="$2"
-        [[ -d $DIRTRABALHO ]] || { echo "$errorMessage"; exit 1; }    
-        [[ -d $DIRBACKUP ]] || { echo "$errorMessage"; exit 1; }    
+        WORK_DIR="$1"
+        BACKUP_DIR="$2"
+        [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
+        if [[ ! -d "$BACKUP_DIR" ]]; then
+            echo "mkdir -p $BACKUP_DIR"
+            if [[ "$CHECK" ]]; then
+                mkdir -p "$BACKUP_DIR"
+            fi
+        fi
     fi
 }
 
