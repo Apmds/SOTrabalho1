@@ -1,37 +1,68 @@
 #!/bin/bash
 
+function throwError() {
+    echo "$errorMessage"
+    exit 1
+}
 
 function startupChecks() {
-    local errorMessage="Usage: $0 [-c] dir_trabalho dir_backup"
+    local errorMessage="Usage: $0 [-c] [-b tfile] [-r regexpr] dir_trabalho dir_backup"
+    local regex='(-c)?\s*(-b\s+\S+)?\s*(-r\s+\S+)?\s+\S+\s+\S+'
+
     if [[ $# -lt 2 ]]; then
-        echo "$errorMessage"
-        exit 1  
+        throwError
     fi
     
-    if [[ $# -gt 3 ]] || ([[ $# -eq 3 ]] && [[ $1 != "-c" ]]); then
-        echo "$errorMessage"
-        exit 1  
+    local args=("$@")
+    CHECK=1
+    IGNORE=1
+    REGEX=1
+
+    if [[ $# -ne 2 ]]; then
+        for ((i=0; i < $#; i++)); do
+            #echo "${args[$i]}"
+            
+            if [[ ${args[$i]} == "-c" ]]; then
+                CHECK=0
+                continue
+            fi
+
+            if [[ ${args[$i]} == "-b" ]]; then
+                IGNORE=0
+
+                if [[ $(($i+1)) > $(($#-3)) ]]; then
+                    throwError
+                fi
+
+                if [[ -f ${args[$(($i+1))]} ]]; then
+                    IGNORE_FILE=${args[$(($i+1))]}
+                    ((i++))
+                    continue
+                else
+                    throwError
+                fi
+            fi
+
+            if [[ ${args[$i]} == "-r" ]]; then
+                REGEX=0
+                
+                if [[ $(($i+1)) > $(($#-3)) ]]; then
+                    throwError
+                fi
+
+                EXPRESSION=${args[$(($i+1))]}
+                ((i++))
+                continue
+            fi
+        done
     fi
 
-
-    if [[ $# -eq 3 && $1 == "-c" ]]; then
-        CHECK=0
-    else
-        CHECK=1
-    fi
-
-
-    if [[ "$CHECK" -eq 0 ]]; then
-        WORK_DIR="$2"
-        BACKUP_DIR="$3"
-    else
-        WORK_DIR="$1"
-        BACKUP_DIR="$2"
-    fi
+    WORK_DIR=${args[(($#-2))]}
+    BACKUP_DIR=${args[(($#-1))]}
     
-    [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
+    [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }
     if [[ ! -d "$BACKUP_DIR" ]]; then
-        echo "mkdir $BACKUP_DIR"
+        echo "mkdir -p $BACKUP_DIR"
         [[ "$CHECK" -eq 1 ]] && { mkdir -p "$BACKUP_DIR" ;}
     fi
 }
@@ -62,7 +93,7 @@ function main() {
             fi
         fi
     done
-
+    
     for file in "$BACKUP_DIR"/*; do
         file_work="${file//$BACKUP_DIR/$WORK_DIR}"
         
