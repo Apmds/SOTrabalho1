@@ -20,30 +20,19 @@ function startupChecks() {
         CHECK=1
     fi
 
-    #echo $CHECK
 
-
-    if [[ "$CHECK" ]]; then
+    if [[ "$CHECK" -eq 0 ]]; then
         WORK_DIR="$2"
         BACKUP_DIR="$3"
-        [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
-        if [[ ! -d "$BACKUP_DIR" ]]; then
-            echo "mkdir -p $BACKUP_DIR"
-            if [[ "$CHECK" ]]; then
-                mkdir -p "$BACKUP_DIR"
-            fi
-        fi          
     else
-        echo AAAAA
         WORK_DIR="$1"
         BACKUP_DIR="$2"
-        [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
-        if [[ ! -d "$BACKUP_DIR" ]]; then
-            echo "mkdir -p $BACKUP_DIR"
-            if [[ "$CHECK" ]]; then
-                mkdir -p "$BACKUP_DIR"
-            fi
-        fi
+    fi
+    
+    [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
+    if [[ ! -d "$BACKUP_DIR" ]]; then
+        echo "mkdir -p $BACKUP_DIR"
+        [[ "$CHECK" -eq 1 ]] && { mkdir -p "$BACKUP_DIR" ;}
     fi
 }
 
@@ -51,15 +40,38 @@ function startupChecks() {
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
     startupChecks "$@"
+    
+    for file in "$WORK_DIR"/*; do
+        if [[ -f $file ]]; then
+            file_backup="${file//$WORK_DIR/$BACKUP_DIR}"
+                
+            if [[ -e $file_backup ]]; then
+                if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
+                    date_backup=$(date -r "$file_backup" +%s)
+                    date_file=$(date -r "$file" +%s)
 
-    WORK_DIR;
-    BACKUP_DIR;
-    for i in "$(WORK_DIR/*)"; do
-        echo $i
+                    if [[ date_backup -lt date_file ]]; then # Fazer o backup só se o ficheiro no backup é mais antigo
+                        echo "cp -a $file $file_backup"
+                        [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
+                        
+                    fi
+                fi
+            else # Ficheiro não existente no backup
+                echo "cp -a $file $file_backup"
+                [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
+            fi
+        fi
     done
 
-    date -r joinWords.c +%s
-    
+    for file in "$BACKUP_DIR"/*; do
+        file_work="${file//$BACKUP_DIR/$WORK_DIR}"
+        
+        if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
+            echo "rm $file"
+            [[ "$CHECK" -eq 1 ]] && { rm $file ;}
+        fi
+    done
 }
+
 
 main "$@"
