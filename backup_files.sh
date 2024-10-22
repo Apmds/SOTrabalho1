@@ -34,6 +34,7 @@ function startupChecks() {
             fi
         fi          
     else
+        echo AAAAA
         WORK_DIR="$1"
         BACKUP_DIR="$2"
         [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }    
@@ -51,8 +52,11 @@ function startupChecks() {
 function main() {
     startupChecks "$@"
 
-    DIRTRABALHO;
-    DIRBACKUP;
+    WORK_DIR;
+    BACKUP_DIR;
+    for i in "$(WORK_DIR/*)"; do
+        echo $i
+    done
 
     date -r joinWords.c +%s
     
