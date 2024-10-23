@@ -39,7 +39,7 @@ function startupChecks() {
                     ((i++))
                     continue
                 else
-                    throwError
+                    throwError                          # Ficheiro inválido
                 fi
             fi
 
@@ -57,9 +57,21 @@ function startupChecks() {
         done
     fi
 
+    # Obter nomes dos ficheiros ignorados
+    if [[ $IGNORE -eq 0 ]]; then
+        declare -a IGNORED_FILES
+        local counter=0
+        while IFS= read -r line; do
+            IGNORED_FILES[$counter]="$line"
+            ((counter++))
+        done < <(grep "" $IGNORE_FILE)
+    fi
+    
+    # Obter nomes dos diretórios
     WORK_DIR=${args[(($#-2))]}
     BACKUP_DIR=${args[(($#-1))]}
     
+    # Verificação dos diretórios
     [[ -d "$WORK_DIR" ]] || { echo "Work directory $WORK_DIR does not exist!"; exit 1; }
     if [[ ! -d "$BACKUP_DIR" ]]; then
         echo "mkdir -p $BACKUP_DIR"
@@ -82,6 +94,9 @@ function main() {
                     date_file=$(date -r "$file" +%s)
 
                     if [[ date_backup -lt date_file ]]; then # Fazer o backup só se o ficheiro no backup é mais antigo
+                        #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
+                        #    echo a
+                        #fi
                         echo "cp -a $file $file_backup"
                         [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
                         
