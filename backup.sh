@@ -139,8 +139,8 @@ function main() {
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
-            args_rec[-1]="$BACKUP_DIR/$file"
-            echo "${args_rec[@]}"
+            args_rec[-1]="$BACKUP_DIR/${file#$WORK_DIR/}"
+            #echo "${args_rec[@]}"
             ./backup.sh "${args_rec[@]}" 
         fi
     done
