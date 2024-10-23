@@ -21,35 +21,29 @@ function startupChecks() {
     if [[ $# -ne 2 ]]; then
         for ((i=0; i < $#; i++)); do
             #echo "${args[$i]}"
-            
             if [[ ${args[$i]} == "-c" ]]; then
                 CHECK=0
                 continue
             fi
-
             if [[ ${args[$i]} == "-b" ]]; then
                 IGNORE=0
-
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
                     throwError
                 fi
-
                 if [[ -f ${args[$(($i+1))]} ]]; then
                     IGNORE_FILE=${args[$(($i+1))]}
                     ((i++))
                     continue
                 else
-                    throwError                          # Ficheiro inválido
+                    throwError     # Ficheiro inválido
                 fi
             fi
-
             if [[ ${args[$i]} == "-r" ]]; then
                 REGEX=0
                 
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
                     throwError
                 fi
-
                 EXPRESSION=${args[$(($i+1))]}
                 ((i++))
                 continue
@@ -59,11 +53,9 @@ function startupChecks() {
 
     # Obter nomes dos ficheiros ignorados
     if [[ $IGNORE -eq 0 ]]; then
-        declare -a IGNORED_FILES
-        local counter=0
+        declare -g -A IGNORED_FILES
         while IFS= read -r line; do
-            IGNORED_FILES[$counter]="$line"
-            ((counter++))
+            IGNORED_FILES["$line"]=0
         done < <(grep "" $IGNORE_FILE)
     fi
     
@@ -83,8 +75,44 @@ function startupChecks() {
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
     startupChecks "$@"
-    
+    #echo "Ignored files: ${IGNORED_FILES[@]}"
+    #echo "$EXPRESSION"
+
     for file in "$WORK_DIR"/*; do
+        
+        #Ignorar ficheiros
+        #Se eles tiverem no backup têm de ser apagados?? 
+        if [[ "$IGNORE" -eq 0 ]]; then
+            if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
+                echo "Ignoring $file"
+                continue
+            fi
+        fi
+        
+        # if [[ "$IGNORE" -eq 0 ]]; then
+        #     ignore_flag=1
+        #     for ig_file in "${IGNORED_FILES[@]}"; do
+        #         # Os ficheiros a ignorar só têm o basepath??
+        #         if [[ "${file##*/}" == "$ig_file" ]]; then
+        #             ignore_flag=0
+        #             break
+        #         fi
+        #     done
+        #     if [[ "$ignore_flag" -eq 0 ]]; then
+        #         echo "Ignoring $file"
+        #         continue
+        #     fi
+        # fi
+
+        #Ignorar ficheiros que verificam o regexpr
+        if [[ "$REGEX" -eq 0 ]]; then
+            if [[ "$file" =~ $EXPRESSION ]]; then
+                echo "Ignoring (regex) $file"
+                continue
+            fi
+        fi
+         
+        
         if [[ -f $file ]]; then
             file_backup="${file//$WORK_DIR/$BACKUP_DIR}"
                 
@@ -93,7 +121,8 @@ function main() {
                     date_backup=$(date -r "$file_backup" +%s)
                     date_file=$(date -r "$file" +%s)
 
-                    if [[ date_backup -lt date_file ]]; then # Fazer o backup só se o ficheiro no backup é mais antigo
+                    # Fazer o backup só se o ficheiro no backup é mais antigo
+                    if [[ date_backup -lt date_file ]]; then 
                         #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
                         #    echo a
                         #fi
@@ -106,6 +135,13 @@ function main() {
                 echo "cp -a $file $file_backup"
                 [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
             fi
+        else
+            #É uma diretoria
+            args_rec=("$@")
+            args_rec[-2]="$file"
+            args_rec[-1]="$BACKUP_DIR/$file"
+            echo "${args_rec[@]}"
+            ./backup.sh "${args_rec[@]}" 
         fi
     done
     
