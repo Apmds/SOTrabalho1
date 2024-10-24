@@ -1,4 +1,8 @@
 #!/bin/bash
+#Quem fex o quê?
+#Explicar oss testes que fizeram e porquê
+# Eplicar a solução e a estrutura do código
+# Bibliografia
 
 function throwError() {
     echo "$errorMessage"
@@ -81,28 +85,13 @@ function main() {
     for file in "$WORK_DIR"/*; do
         
         #Ignorar ficheiros
-        #Se eles tiverem no backup têm de ser apagados?? 
+        #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
             if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
                 echo "Ignoring $file"
                 continue
             fi
         fi
-        
-        # if [[ "$IGNORE" -eq 0 ]]; then
-        #     ignore_flag=1
-        #     for ig_file in "${IGNORED_FILES[@]}"; do
-        #         # Os ficheiros a ignorar só têm o basepath??
-        #         if [[ "${file##*/}" == "$ig_file" ]]; then
-        #             ignore_flag=0
-        #             break
-        #         fi
-        #     done
-        #     if [[ "$ignore_flag" -eq 0 ]]; then
-        #         echo "Ignoring $file"
-        #         continue
-        #     fi
-        # fi
 
         #Ignorar ficheiros que verificam o regexpr
         if [[ "$REGEX" -eq 0 ]]; then
@@ -114,7 +103,10 @@ function main() {
          
         
         if [[ -f $file ]]; then
-            file_backup="${file//$WORK_DIR/$BACKUP_DIR}"
+            # Substituir o diretório de trabalho pelo diretório de backup
+            file_backup="${file%/*}"
+            file_backup="${file_backup//$WORK_DIR/$BACKUP_DIR}"
+            file_backup="$file_backup/${file##*/}"
                 
             if [[ -e $file_backup ]]; then
                 if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
@@ -126,14 +118,14 @@ function main() {
                         #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
                         #    echo a
                         #fi
-                        echo "cp -a $file $file_backup"
-                        [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
+                        echo "cp -a "$file" "$file_backup""
                         
+                        [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
                 fi
             else # Ficheiro não existente no backup
                 echo "cp -a $file $file_backup"
-                [[ "$CHECK" -eq 1 ]] && { cp -a $file $file_backup ;}
+                [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
             fi
         else
             #É uma diretoria
@@ -141,16 +133,19 @@ function main() {
             args_rec[-2]="$file"
             args_rec[-1]="$BACKUP_DIR/${file#$WORK_DIR/}"
             #echo "${args_rec[@]}"
-            ./backup.sh "${args_rec[@]}" 
+            ./backup.sh "${args_rec[@]}"
         fi
     done
     
     for file in "$BACKUP_DIR"/*; do
-        file_work="${file//$BACKUP_DIR/$WORK_DIR}"
+        # Substituir o diretório de trabalho pelo diretório de backup
+        file_work="${file%/*}"
+        file_work="${file_work//$BACKUP_DIR/$WORK_DIR}"
+        file_work="$file_work/${file##*/}"
         
         if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
             echo "rm $file"
-            [[ "$CHECK" -eq 1 ]] && { rm $file ;}
+            [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
         fi
     done
 }
