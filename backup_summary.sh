@@ -1,10 +1,16 @@
 #!/bin/bash
-#Quem fex o quê?
+#Quem fez o quê?
 #Explicar oss testes que fizeram e porquê
-# Eplicar a solução e a estrutura do código
+# EXplicar a solução e a estrutura do código
 # Bibliografia
 
+#UPDATED=0
+#COPIED=0
+#SIZE=0
+#DELITED=0
+
 function throwError() {
+    ((ERRORS++));
     case "$1" in
         1)
             echo "Usage: [-c] [-b tfile] [-r regexpr] dir_trabalho dir_backup"
@@ -16,6 +22,10 @@ function throwError() {
         
         3)
             echo "$2 is not a file!"
+        ;;
+
+        4)
+            echo "Directory $2 is a subdirectory of $3!"
         ;;
         
         *)
@@ -38,13 +48,13 @@ function startupChecks() {
     REGEX=1
 
     if [[ $# -ne 2 ]]; then
-        for ((i=0; i < $#; i++)); do
+         for ((i=0; i < $#; i++)); do
             #echo "${args[$i]}"
-            if [[ ${args[$i]} == "-c" ]]; then
+            if [[ ${args[$i]} == "-c" && "$CHECK" -eq 1 ]]; then
                 CHECK=0
                 continue
             fi
-            if [[ ${args[$i]} == "-b" ]]; then
+            if [[ ${args[$i]} == "-b" && "$IGNORE" -eq 1 ]]; then
                 IGNORE=0
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
                     throwError 1
@@ -57,7 +67,7 @@ function startupChecks() {
                     throwError 3 ${args[$(($i+1))]}     # Ficheiro inválido
                 fi
             fi
-            if [[ ${args[$i]} == "-r" ]]; then
+            if [[ ${args[$i]} == "-r" && "$REGEX" -eq 1 ]]; then
                 REGEX=0
                 
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
@@ -82,6 +92,18 @@ function startupChecks() {
     WORK_DIR=${args[(($#-2))]}
     BACKUP_DIR=${args[(($#-1))]}
     
+
+    # Verificar se os diretórios não estão um dentro do outro
+    aux="${BACKUP_DIR#$WORK_DIR}" # Diretório substituido por o de backup
+    if [[ "$aux" != "$BACKUP_DIR" ]]; then
+        throwError 4 $BACKUP_DIR $WORK_DIR
+    fi
+    
+    aux="${WORK_DIR#$BACKUP_DIR}" # Diretório substituido por o de backup
+    if [[ "$aux" != "$WORK_DIR" ]]; then
+        throwError 4 $WORK_DIR $BACKUP_DIR
+    fi
+
     # Verificação dos diretórios
     [[ -d "$WORK_DIR" ]] || { throwError 2; }
     if [[ ! -d "$BACKUP_DIR" ]]; then
@@ -93,12 +115,21 @@ function startupChecks() {
 
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
+    shopt -s dotglob # Ver ficheiros escondidos
+
     startupChecks "$@"
     #echo "Ignored files: ${IGNORED_FILES[@]}"
     #echo "$EXPRESSION"
 
     for file in "$WORK_DIR"/*; do
-    
+
+        ERRORS=0
+        WARININGS=0
+        UPDATED=0
+        COPIED=0
+        SIZE=0
+        DELITED=0
+
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
@@ -121,9 +152,9 @@ function main() {
             
 
             # Substituir o diretório de trabalho pelo diretório de backup
-            file_backup="${file%/*}"
-            file_backup="${file_backup//$WORK_DIR/$BACKUP_DIR}"
-            file_backup="$file_backup/${file##*/}"
+            file_backup="${file%/*}" # Diretório
+            file_backup="${file_backup//$WORK_DIR/$BACKUP_DIR}" # Diretório substituido por o de backup
+            file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
                 
             if [[ -e $file_backup ]]; then
                 if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
@@ -135,23 +166,49 @@ function main() {
                         #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
                         #    echo a
                         #fi
+
+                        ## COLORCAR TEXTO DE CRIAR DIRETÓRIO
+
                         echo "cp -a "$file" "$file_backup""
+
+                        #SIZE+=(wc -c <"$file")
                         
                         [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
+
+                    if [[ date_backup -gt date_file ]]; then
+                        ((WARININGS++))
+                        echo WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen
+                    fi
+
                 fi
             else # Ficheiro não existente no backup
                 echo "cp -a $file $file_backup"
                 [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
             fi
-        else
+        elif [[ -d $file ]]; then
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
             args_rec[-1]="$BACKUP_DIR/${file#$WORK_DIR/}"
             #echo "${args_rec[@]}"
-            ./backup.sh "${args_rec[@]}"
+            $0 "${args_rec[@]}"
+        else
+            # O diretório de trabalho está vazio
+
+            #echo DIR TRABALHO: "$WORK_DIR"
+            #echo DIR BACKUP: "$BACKUP_DIR"
+
+            # Substituir o diretório de trabalho pelo diretório de backup
+            dir_backup="${file%/*}"
+            dir_backup="${dir_backup//$WORK_DIR/$BACKUP_DIR}"
+
+            if [[ ! -d "$dir_backup" ]]; then
+                echo mkdir -p "$dir_backup"
+                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; }
+            fi
         fi
+        
     done
     
     for file in "$BACKUP_DIR"/*; do
@@ -164,6 +221,11 @@ function main() {
         #    fi
         #fi
 
+        # Diretório de backup vazio
+        if [[ ! -e "$file" ]]; then
+            break
+        fi
+
         # Substituir o diretório de trabalho pelo diretório de backup
         file_work="${file%/*}"
         file_work="${file_work//$BACKUP_DIR/$WORK_DIR}"
@@ -174,6 +236,10 @@ function main() {
             [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
         fi
     done
+
+
+
+    shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
 
 
