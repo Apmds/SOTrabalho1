@@ -4,10 +4,11 @@
 # EXplicar a solução e a estrutura do código
 # Bibliografia
 
-#UPDATED=0
-#COPIED=0
-#SIZE=0
-#DELITED=0
+# Os nomes dos ficheiros no -b podem ser só nomes, para ignorar todos os ficheiros com esse nome ou podem ter o caminho, para ignorar apenas esse ficheiro.
+# UPDATED=0
+# COPIED=0
+# SIZE=0
+# DELITED=0
 
 function throwError() {
     ((ERRORS++));
