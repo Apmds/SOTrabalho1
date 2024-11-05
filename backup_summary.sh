@@ -134,7 +134,7 @@ function main() {
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
-            if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
+            if [[ "${IGNORED_FILES[$file]}" ]]; then #${file##*/}]
                 echo "Ignoring $file."
                 continue
             fi
