@@ -1,6 +1,6 @@
 #!/bin/bash
-#Quem fez o quê?
-#Explicar oss testes que fizeram e porquê
+# Quem fez o quê?
+# Explicar oss testes que fizeram e porquê
 # EXplicar a solução e a estrutura do código
 # Bibliografia
 
@@ -11,7 +11,7 @@
 # DELITED=0
 
 function throwError() {
-    ((ERRORS++));
+    ((ERRORS++))
     case "$1" in
         1)
             echo "Usage: [-c] [-b tfile] [-r regexpr] dir_trabalho dir_backup"
@@ -113,7 +113,13 @@ function startupChecks() {
     fi
 }
 
+# informação para cada diretório
+function summary() {
+    echo "While backuping "${file%/*}": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)"
+}
 
+
+GLOBAL_INFO=(0 0 0 0 0 0 0)
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
     shopt -s dotglob # Ver ficheiros escondidos
@@ -122,15 +128,17 @@ function main() {
     #echo "Ignored files: ${IGNORED_FILES[@]}"
     #echo "$EXPRESSION"
 
+
+    ERRORS=0
+    WARNINGS=0
+    UPDATED=0
+    COPIED=0
+    SIZE_COPIED=0
+    DELETED=0
+    SIZE_DELETED=0
+
+
     for file in "$WORK_DIR"/*; do
-
-        ERRORS=0
-        WARININGS=0
-        UPDATED=0
-        COPIED=0
-        SIZE=0
-        DELITED=0
-
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
@@ -148,9 +156,7 @@ function main() {
             fi
         fi
          
-        
         if [[ -f $file ]]; then
-            
 
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
@@ -172,28 +178,36 @@ function main() {
 
                         echo "cp -a "$file" "$file_backup""
 
-                        #SIZE+=(wc -c <"$file")
+                        ((UPDATED++)) # ficheiro do backup atualizado
+                        ((COPIED++))
+                        SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
                         
                         [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
 
                     if [[ date_backup -gt date_file ]]; then
-                        ((WARININGS++))
+                        ((WARNINGS++))
                         echo WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen
                     fi
 
                 fi
             else # Ficheiro não existente no backup
                 echo "cp -a $file $file_backup"
+                ((COPIED++))
+                SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
                 [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
             fi
+
+
         elif [[ -d $file ]]; then
+            summary
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
             args_rec[-1]="$BACKUP_DIR/${file#$WORK_DIR/}"
             #echo "${args_rec[@]}"
-            $0 "${args_rec[@]}"
+            main "${args_rec[@]}"
+
         else
             # O diretório de trabalho está vazio
 
@@ -209,7 +223,6 @@ function main() {
                 [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; }
             fi
         fi
-        
     done
     
     for file in "$BACKUP_DIR"/*; do
@@ -237,8 +250,6 @@ function main() {
             [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
         fi
     done
-
-
 
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
