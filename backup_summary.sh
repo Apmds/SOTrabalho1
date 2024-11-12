@@ -126,6 +126,9 @@ function summary() {
     echo "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)"
 }
 
+function bigSummary() {
+    echo "While backuping "$1": $TOTAL_ERRORS Errors; $TOTAL_WARNINGS Warnings; $TOTAL_UPDATED Updated; $TOTAL_COPIED Copied ($TOTAL_SIZE_COPIED B); $TOTAL_DELETED Deleted ($TOTAL_SIZE_DELETED B)"
+}
 
 function delete_dir() {
     local file
@@ -167,16 +170,18 @@ function delete_dir() {
     done
 }
 
+function updateTotalVariables() {
+    TOTAL_ERRORS=$((TOTAL_ERRORS + $ERRORS))
+    TOTAL_WARNINGS=$((TOTAL_WARNINGS + $WARNINGS))
+    TOTAL_UPDATED=$((TOTAL_UPDATED + $UPDATED))
+    TOTAL_COPIED=$((TOTAL_COPIED + $COPIED))
+    TOTAL_SIZE_COPIED=$((TOTAL_SIZE_COPIED + $SIZE_COPIED))
+    TOTAL_DELETED=$((TOTAL_DELETED + $DELETED))
+    TOTAL_SIZE_DELETED=$((TOTAL_SIZE_DELETED + $SIZE_DELETED))
+}
 
-# Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
-function main() {
-    shopt -s dotglob # Ver ficheiros escondidos
+function backup() {
 
-    startupChecks "$@"
-    #echo "Ignored files: ${IGNORED_FILES[@]}"
-    #echo "$EXPRESSION"
-
-    
     ERRORS=0
     WARNINGS=0
     UPDATED=0
@@ -185,10 +190,9 @@ function main() {
     DELETED=0
     SIZE_DELETED=0
 
-    local workdir="$WORK_DIR"
-    local backupdir="$BACKUP_DIR"
-
-    for file in "$workdir"/*; do
+    for file in "$1"/*; do
+        #echo "dir1 $1"
+        #echo "dir2 $2"
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
@@ -210,7 +214,7 @@ function main() {
 
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
-            file_backup="${file_backup//$workdir/$backupdir}" # Diretório substituido por o de backup
+            file_backup="${file_backup//$1/$2}" # Diretório substituido por o de backup
             file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
 
             if [[ -e $file_backup ]]; then
@@ -248,33 +252,27 @@ function main() {
                 [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
             fi
 
-
         elif [[ -d $file ]]; then
+            summary "$1"
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
-            args_rec[-1]="$backupdir/${file#$workdir/}"
+            args_rec[-1]="$2/${file#$1/}"
             #echo "${args_rec[@]}"
+            
+            updateTotalVariables
 
-
-            TOTAL_ERRORS=$((TOTAL_ERRORS + $ERRORS))
-            TOTAL_WARNINGS=$((TOTAL_WARNINGS + $WARNINGS))
-            TOTAL_UPDATED=$((TOTAL_UPDATED + $UPDATED))
-            TOTAL_COPIED=$((TOTAL_COPIED + $COPIED))
-            TOTAL_SIZE_COPIED=$((TOTAL_SIZE_COPIED + $SIZE_COPIED))
-            TOTAL_DELETED=$((TOTAL_DELETED + $DELETED))
-            TOTAL_SIZE_DELETED=$((TOTAL_SIZE_DELETED + $SIZE_DELETED))
-            main "${args_rec[@]}"
+            backup "${args_rec[@]}"
 
         else
             # O diretório de trabalho está vazio
 
-            #echo DIR TRABALHO: "$workdir"
-            #echo DIR BACKUP: "$backupdir"
+            #echo DIR TRABALHO: "$1"
+            #echo DIR BACKUP: "$2"
 
             # Substituir o diretório de trabalho pelo diretório de backup
             dir_backup="${file%/*}"
-            dir_backup="${dir_backup//$workdir/$backupdir}"
+            dir_backup="${dir_backup//$1/$2}"
 
             if [[ ! -d "$dir_backup" ]]; then
                 echo mkdir -p "$dir_backup"
@@ -282,11 +280,27 @@ function main() {
             fi
         fi
     done
+}
+
+
+# Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
+function main() {
+    shopt -s dotglob # Ver ficheiros escondidos
+
+    startupChecks "$@"
+    #echo "Ignored files: ${IGNORED_FILES[@]}"
+    #echo "$EXPRESSION"
+
+    local workdir="$WORK_DIR"
+    local backupdir="$BACKUP_DIR"
+
+    backup "$workdir" "$backupdir"
+    updateTotalVariables
+    summary "${args_rec[0]}"
 
     delete_dir "$backupdir"
 
-    summary "$workdir"
-
+    bigSummary "$workdir"
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
 
