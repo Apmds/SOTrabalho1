@@ -1,6 +1,6 @@
 #!/bin/bash
 # Quem fez o quê?
-# Explicar oss testes que fizeram e porquê
+# Explicar os testes que fizeram e porquê
 # EXplicar a solução e a estrutura do código
 # Bibliografia
 
@@ -9,6 +9,14 @@
 # COPIED=0
 # SIZE=0
 # DELITED=0
+
+TOTAL_ERRORS=0
+TOTAL_WARNINGS=0
+TOTAL_UPDATED=0
+TOTAL_COPIED=0
+TOTAL_SIZE_COPIED=0
+TOTAL_DELETED=0
+TOTAL_SIZE_DELETED=0
 
 function throwError() {
     ((ERRORS++))
@@ -247,6 +255,15 @@ function main() {
             args_rec[-2]="$file"
             args_rec[-1]="$backupdir/${file#$workdir/}"
             #echo "${args_rec[@]}"
+
+
+            TOTAL_ERRORS=$((TOTAL_ERRORS + $ERRORS))
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + $WARNINGS))
+            TOTAL_UPDATED=$((TOTAL_UPDATED + $UPDATED))
+            TOTAL_COPIED=$((TOTAL_COPIED + $COPIED))
+            TOTAL_SIZE_COPIED=$((TOTAL_SIZE_COPIED + $SIZE_COPIED))
+            TOTAL_DELETED=$((TOTAL_DELETED + $DELETED))
+            TOTAL_SIZE_DELETED=$((TOTAL_SIZE_DELETED + $SIZE_DELETED))
             main "${args_rec[@]}"
 
         else
