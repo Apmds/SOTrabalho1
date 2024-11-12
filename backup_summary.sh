@@ -115,11 +115,51 @@ function startupChecks() {
 
 # informação para cada diretório
 function summary() {
-    echo "While backuping "${file%/*}": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)"
+    echo "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)"
 }
 
 
-GLOBAL_INFO=(0 0 0 0 0 0 0)
+function delete_dir() {
+    local file
+    for file in "$1"/*; do
+        #Ignorar ficheiros
+        #Se eles tiverem no backup têm de ser apagados??
+        #if [[ "$IGNORE" -eq 0 ]]; then
+        #    if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
+        #        echo "Ignoring $file."
+        #        continue
+        #    fi
+        #fi
+
+        # Diretório de backup vazio
+        if [[ ! -e "$file" ]]; then
+            break
+        fi
+
+        # Substituir o diretório de trabalho pelo diretório de backup
+        file_work="${file%/*}"
+        file_work="${file_work//$backupdir/$workdir}"
+        file_work="$file_work/${file##*/}"
+        
+        if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
+
+            if [[ -d "$file" ]]; then
+                delete_dir "$file"
+                echo "rmdir $file"
+                [[ "$CHECK" -eq 1 ]] && { rmdir "$file" ;}
+            fi
+
+            if [[ -f "$file" ]]; then
+                ((DELETED++))
+                SIZE_DELETED=$((SIZE_DELETED + $(wc -c < "$file")))
+                echo "rm $file"
+                [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
+            fi
+        fi
+    done
+}
+
+
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
     shopt -s dotglob # Ver ficheiros escondidos
@@ -128,7 +168,7 @@ function main() {
     #echo "Ignored files: ${IGNORED_FILES[@]}"
     #echo "$EXPRESSION"
 
-
+    
     ERRORS=0
     WARNINGS=0
     UPDATED=0
@@ -137,8 +177,10 @@ function main() {
     DELETED=0
     SIZE_DELETED=0
 
+    local workdir="$WORK_DIR"
+    local backupdir="$BACKUP_DIR"
 
-    for file in "$WORK_DIR"/*; do
+    for file in "$workdir"/*; do
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
@@ -160,9 +202,9 @@ function main() {
 
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
-            file_backup="${file_backup//$WORK_DIR/$BACKUP_DIR}" # Diretório substituido por o de backup
+            file_backup="${file_backup//$workdir/$backupdir}" # Diretório substituido por o de backup
             file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
-                
+
             if [[ -e $file_backup ]]; then
                 if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
                     date_backup=$(date -r "$file_backup" +%s)
@@ -200,23 +242,22 @@ function main() {
 
 
         elif [[ -d $file ]]; then
-            summary
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
-            args_rec[-1]="$BACKUP_DIR/${file#$WORK_DIR/}"
+            args_rec[-1]="$backupdir/${file#$workdir/}"
             #echo "${args_rec[@]}"
             main "${args_rec[@]}"
 
         else
             # O diretório de trabalho está vazio
 
-            #echo DIR TRABALHO: "$WORK_DIR"
-            #echo DIR BACKUP: "$BACKUP_DIR"
+            #echo DIR TRABALHO: "$workdir"
+            #echo DIR BACKUP: "$backupdir"
 
             # Substituir o diretório de trabalho pelo diretório de backup
             dir_backup="${file%/*}"
-            dir_backup="${dir_backup//$WORK_DIR/$BACKUP_DIR}"
+            dir_backup="${dir_backup//$workdir/$backupdir}"
 
             if [[ ! -d "$dir_backup" ]]; then
                 echo mkdir -p "$dir_backup"
@@ -224,32 +265,10 @@ function main() {
             fi
         fi
     done
-    
-    for file in "$BACKUP_DIR"/*; do
-        #Ignorar ficheiros
-        #Se eles tiverem no backup têm de ser apagados??
-        #if [[ "$IGNORE" -eq 0 ]]; then
-        #    if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
-        #        echo "Ignoring $file."
-        #        continue
-        #    fi
-        #fi
 
-        # Diretório de backup vazio
-        if [[ ! -e "$file" ]]; then
-            break
-        fi
+    delete_dir "$backupdir"
 
-        # Substituir o diretório de trabalho pelo diretório de backup
-        file_work="${file%/*}"
-        file_work="${file_work//$BACKUP_DIR/$WORK_DIR}"
-        file_work="$file_work/${file##*/}"
-        
-        if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
-            echo "rm $file"
-            [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
-        fi
-    done
+    summary "$workdir"
 
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
