@@ -123,7 +123,7 @@ function startupChecks() {
 
 # informação para cada diretório
 function summary() {
-    echo "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)"
+    echo -e "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)\n"
 }
 
 function bigSummary() {
@@ -132,7 +132,23 @@ function bigSummary() {
 
 function delete_dir() {
     local file
-    for file in "$1"/*; do
+
+    
+    local dir=$1
+    local dir_work=$1
+
+    dir_work="${dir_work%/*}"
+    dir_work="${dir_work//$backupdir/$workdir}"
+    dir_work="$dir_work/${dir##*/}"
+
+    num_files=$(ls -1q "$dir_work" | wc -l)
+    
+    if [[ "$num_files" -eq 0 ]]; then
+        summary "$dir_work"
+        return
+    fi
+    
+    for file in "$dir"/*; do
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         #if [[ "$IGNORE" -eq 0 ]]; then
@@ -147,11 +163,15 @@ function delete_dir() {
             break
         fi
 
+        #if [[ -d "$file" ]]; then
+        #    delete_dir "$file"
+        #fi
+
         # Substituir o diretório de trabalho pelo diretório de backup
         file_work="${file%/*}"
         file_work="${file_work//$backupdir/$workdir}"
         file_work="$file_work/${file##*/}"
-        
+
         if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
 
             if [[ -d "$file" ]]; then
@@ -168,6 +188,14 @@ function delete_dir() {
             fi
         fi
     done
+
+    updateTotalVariables
+
+    if [ "$dir" != "$backupdir" ]; then
+        summary "$dir_work"
+    else
+        summary "$workdir"
+    fi
 }
 
 function updateTotalVariables() {
@@ -189,6 +217,12 @@ function backup() {
     SIZE_COPIED=0
     DELETED=0
     SIZE_DELETED=0
+
+    #num_files=$(ls -1q "$WORK_DIR" | wc -l)
+    #
+    #if [[ "$num_files" -eq 0 ]]; then
+    #    return
+    #fi
 
     for file in "$1"/*; do
         #echo "dir1 $1"
@@ -214,7 +248,7 @@ function backup() {
 
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
-            file_backup="${file_backup//$1/$2}" # Diretório substituido por o de backup
+            file_backup="${file_backup//$1/$2}" # Diretório substituido pelo de backup
             file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
 
             if [[ -e $file_backup ]]; then
@@ -253,16 +287,43 @@ function backup() {
             fi
 
         elif [[ -d $file ]]; then
-            summary "$1"
+            #summary "$1"
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
             args_rec[-1]="$2/${file#$1/}"
             #echo "${args_rec[@]}"
             
-            updateTotalVariables
+            # Substituir o diretório de trabalho pelo diretório de backup
+            file_backup="${file%/*}" # Diretório
+            file_backup="${file_backup//$1/$2}" # Diretório substituido pelo de backup
+            file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
+
+            # Criar diretório no backup se não existe
+            if [[ ! -e "$file_backup" ]]; then
+                echo mkdir -p "$file_backup"
+                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$file_backup" ;}
+            fi
+            
+            # Salvar valores
+            local local_ERRORS=$ERRORS
+            local local_WARNINGS=$WARNINGS
+            local local_UPDATED=$UPDATED
+            local local_COPIED=$COPIED
+            local local_SIZE_COPIED=$SIZE_COPIED
+            local local_DELETED=$DELETED
+            local local_SIZE_DELETED=$SIZE_DELETED
 
             backup "${args_rec[@]}"
+
+            # Restaurar valores
+            ERRORS=$local_ERRORS
+            WARNINGS=$local_WARNINGS
+            UPDATED=$local_UPDATED
+            COPIED=$local_COPIED
+            SIZE_COPIED=$local_SIZE_COPIED
+            DELETED=$local_DELETED
+            SIZE_DELETED=$local_SIZE_DELETED
 
         else
             # O diretório de trabalho está vazio
@@ -280,6 +341,8 @@ function backup() {
             fi
         fi
     done
+
+    delete_dir "$2"
 }
 
 
@@ -295,10 +358,10 @@ function main() {
     local backupdir="$BACKUP_DIR"
 
     backup "$workdir" "$backupdir"
-    updateTotalVariables
-    summary "${args_rec[0]}"
+    #updateTotalVariables
+    #summary "${args_rec[0]}"
 
-    delete_dir "$backupdir"
+    #delete_dir "$backupdir"
 
     bigSummary "$workdir"
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
