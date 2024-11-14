@@ -44,11 +44,16 @@ function main() {
 
         if [[ ! -e "$file_other" ]]; then
             echo "$file_other" não existe.
+            continue
         fi
 
-        # Dá sempre igual??
-        a=($(md5sum "$file"))
-        echo "$a"
+        # Dá sempre igual?? Afinal não
+        hash=($(md5sum "$file"))
+        hash_other=($(md5sum "$file_other"))
+        
+        if [[ "$hash" != "$hash_other" ]]; then
+            echo "$file" "$file_other" differ.
+        fi
     done
 }
 
