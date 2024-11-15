@@ -236,9 +236,9 @@ function backup() {
             fi
         fi
 
-        #Ignorar ficheiros que verificam o regexpr
+        #Ignorar ficheiros que NÃO verificam o regexpr
         if [[ "$REGEX" -eq 0 ]]; then
-            if [[ "$file" =~ $EXPRESSION ]]; then
+            if [[ ! "$file" =~ $EXPRESSION ]]; then
                 echo "Ignoring (regex) $file."
                 continue
             fi
