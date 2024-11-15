@@ -32,29 +32,42 @@ function addHiddenFiles() {
     generateRandomText "$TEST_WORK_DIR/subdir2/subdir2a/.hiddenFile.txt"
 }
 
+function addFilesWithSpaces() {
+    touch "$TEST_WORK_DIR/file 5.txt"
+    touch "$TEST_WORK_DIR/subdir1/file spa ces"
+    mkdir "$TEST_WORK_DIR/dir with spaces"
+}
+
 function setupWorkDir() {
 
     rm -rf "$TEST_WORK_DIR"
     mkdir -p "$TEST_WORK_DIR/subdir1" "$TEST_WORK_DIR/subdir2" "$TEST_WORK_DIR/subdir2/subdir2a"
-
     # criar ficheiros no diretório de trabalho
     generateRandomText "$TEST_WORK_DIR/file1.txt"
     generateRandomText "$TEST_WORK_DIR/file2.txt"
     generateRandomText "$TEST_WORK_DIR/file3.txt"
     generateRandomText "$TEST_WORK_DIR/file4.txt"
-
     # criar ficheiros dentro do subdiretório 1
     generateRandomText "$TEST_WORK_DIR/subdir1/file1_subdir1.txt"
     generateRandomText "$TEST_WORK_DIR/subdir1/file2_subdir1.txt"
     generateRandomText "$TEST_WORK_DIR/subdir1/file3_subdir1.txt"
     generateRandomText "$TEST_WORK_DIR/subdir1/file4.txt"
-
     # criar ficheiros dentro do subdiretório 2
     generateRandomText "$TEST_WORK_DIR/subdir2/file1_subdir2.txt"
     generateRandomText "$TEST_WORK_DIR/subdir2/file2_subdir2.txt"
-
     # criar ficheiros dentro do subdiretório do diretório 2 
     generateRandomText "$TEST_WORK_DIR/subdir2/subdir2a/file1_subdir2a.txt"
+}
+
+function setupEmptyWorkDir() {
+
+    rm -rf "$TEST_WORK_DIR"
+    mkdir -p "$TEST_WORK_DIR"
+    mkdir "$TEST_WORK_DIR/subdir1"
+    mkdir "$TEST_WORK_DIR/subdir2"
+    mkdir "$TEST_WORK_DIR/subdir2/anotherDir"
+    mkdir "$TEST_WORK_DIR/subdir2/anotherDir/anotherDir2"
+
 }
 
 function setupIgnoreFiles() {
@@ -83,8 +96,6 @@ function testIgnoreFiles() {
             result=1
         fi
     done < "$TEST_IGNORE_FILE"
-    #echo "Backup summary:"
-    #cat "$RESULTS_FILE"
     echo
     checkResult "$result"
     clean
@@ -217,7 +228,7 @@ function backupDirInsideWorkDir() {
 
 
 function test2Options() {
-    echo "=== Testing all 2 options ( -b [tfile] -r [regexpr]) ==="
+    echo "=== Testing 2 options ( -b [tfile] -r [regexpr]) ==="
     echo
     setupWorkDir
     setupIgnoreFiles
@@ -227,7 +238,6 @@ function test2Options() {
     ./backup_summary.sh -b "$TEST_IGNORE_FILE" -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
 
     while IFS= read -r ignored_file; do
-        echo "blabalbal  $ignored_file"
         if grep -q "Ignoring $ignored_file" "$RESULTS_FILE"; then
             echo "The file $ignored_file was ignored correctly."
         else
@@ -255,7 +265,7 @@ function test2Options() {
     clean
 }
 
-function hiddenFiles() {
+function testHiddenFiles() {
     echo "=== Testing hidden files ==="
     echo
     setupWorkDir
@@ -278,14 +288,98 @@ function hiddenFiles() {
     else
         echo ".hiddenFile2.txt was copied correctly."
     fi
-
-
-    checkResult "$result"
+    checkResult "$result"   
     echo
     clean
 
 }
 
+function testFilesWithSpaces() {
+    echo "=== Testing files with spaces ==="
+    echo
+    setupWorkDir
+    ((TOTAL_TESTS++))
+    local result=0
+    addFilesWithSpaces
+
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+
+    if [[ -e "$TEST_BACKUP_DIR/file 5.txt" ]]; then
+        echo "File with spaces was copied correctly."
+    else
+        echo "Error: file with spaces was not copied correctly"
+        result=1
+    fi
+    if [[ -e "$TEST_BACKUP_DIR/subdir1/file spa ces" ]]; then
+        echo "File with spaces was copied correctly."
+    else
+        echo "Error: file with spaces was not copied correctly."
+        result=1
+    fi
+    if [[ -d "$TEST_BACKUP_DIR/dir with spaces" ]]; then
+        echo "Directory with spaces was copied correctly."
+    else
+        echo "Error: Directory with spaces was not copied correctly."
+        result=1
+    fi
+
+    checkResult "$result"
+    echo
+    clean
+}
+
+
+function testEmptyDirectories() {
+    echo "=== Testing files with spaces ==="
+    echo
+    ((TOTAL_TESTS++))
+    local result=0
+
+    # primeiro teste com o diretório de trabalho vazio   
+    rm -rf "$TEST_WORK_DIR"
+    mkdir -p "$TEST_WORK_DIR"
+    echo "Testing with directory $TEST_WORK_DIR empty..."
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    if [[ -d "$TEST_BACKUP_DIR" && -z "$(ls -A $TEST_BACKUP_DIR)" ]]; then
+        echo "The directory $TEST_BACKUP_DIR is empty."
+    else
+        echo "Error: The directory $TEST_BACKUP_DIR is not empty."
+        result=1
+    fi
+    clean
+
+    # segundo teste com o diretório de trabalhocom subdiretórios vazios
+    setupEmptyWorkDir
+    echo "Testing with directory $TEST_WORK_DIR with empty subdirectories..."
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+
+    local dirs=( "$TEST_BACKUP_DIR/subdir1" "$TEST_BACKUP_DIR/subdir2" "$TEST_BACKUP_DIR/subdir2/anotherDir" "$TEST_BACKUP_DIR/subdir2/anotherDir/anotherDir2")
+    for dir in "${dirs[@]}"; do
+        
+        if [[ -d "$dir" ]]; then
+
+            if [[ -z "$(ls -A "$dir")" ]]; then
+
+                echo "The directory $dir is completely empty."
+
+            elif [[ -z "$(find "$dir" -maxdepth 1 -type f)" ]]; then
+
+                echo "The directory $dir contains only subdirectories."
+            else
+                echo "Error: The directory $dir contains files."
+                result=1
+            fi
+
+        else
+            echo "Error: The directory $dir does not exist."
+            result=1
+        fi
+    done
+
+    checkResult "$result"
+    echo
+    clean
+}
 
 
 function main() {
@@ -295,14 +389,15 @@ function main() {
     testRegex # TESTE OPÇÃO REGEX
     backupDirInsideWorkDir # TESTE BACKUP_DIR DENTRO WORL_DIR
     test2Options # TESTE COM AS 3 OPÇÕES
-    hiddenFiles # TESTE FICHEIROS ESCONDIDOS
+    testHiddenFiles # TESTE FICHEIROS ESCONDIDOS
+    testFilesWithSpaces # TESTE FICHEIROS COM ESPAÇOS
+    testEmptyDirectories # TESTE DIRETÓRIOS VAZIOS
 
     echo
-    echo "Number of tests performed: $TOTAL_TESTS"
-    echo "Number of successful tests: $SUCCESS_TETS"
-    echo "Nmber of failed tests: $FAILURE_TESTS"
+    echo "NUMBER OF TESTS PERFORMED: $TOTAL_TESTS"
+    echo "NUMBER OF SUCCESSFUL TESTS: $SUCCESS_TETS"
+    echo "NUMBER OF FAILED TESTS: $FAILURE_TESTS"
     echo
-    #clean
 
 }
 
