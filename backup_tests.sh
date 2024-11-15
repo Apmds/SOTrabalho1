@@ -27,10 +27,15 @@ function checkResult() {
     fi
 }
 
+function addHiddenFiles() {
+    generateRandomText "$TEST_WORK_DIR/subdir2/.hiddenFile.txt"
+    generateRandomText "$TEST_WORK_DIR/subdir2/subdir2a/.hiddenFile.txt"
+}
+
 function setupWorkDir() {
 
     rm -rf "$TEST_WORK_DIR"
-    mkdir -p "$TEST_WORK_DIR/subdir1" "$TEST_WORK_DIR/subdir2"
+    mkdir -p "$TEST_WORK_DIR/subdir1" "$TEST_WORK_DIR/subdir2" "$TEST_WORK_DIR/subdir2/subdir2a"
 
     # criar ficheiros no diretório de trabalho
     generateRandomText "$TEST_WORK_DIR/file1.txt"
@@ -48,8 +53,7 @@ function setupWorkDir() {
     generateRandomText "$TEST_WORK_DIR/subdir2/file1_subdir2.txt"
     generateRandomText "$TEST_WORK_DIR/subdir2/file2_subdir2.txt"
 
-    # criar subdiretorio dentro do subdiretório 2
-    mkdir -p "$TEST_WORK_DIR/subdir2/subdir2a"
+    # criar ficheiros dentro do subdiretório do diretório 2 
     generateRandomText "$TEST_WORK_DIR/subdir2/subdir2a/file1_subdir2a.txt"
 }
 
@@ -246,10 +250,40 @@ function test2Options() {
         done
     done
 
+    checkResult "$result"
+    echo
+    clean
+}
+
+function hiddenFiles() {
+    echo "=== Testing hidden files ==="
+    echo
+    setupWorkDir
+    ((TOTAL_TESTS++))
+    local result=0
+    addHiddenFiles
+
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+
+    if ! ls -a "$TEST_BACKUP_DIR/subdir2" | grep -q ".hiddenFile.txt"; then
+        echo "Error: .hiddenFile.txt was not copied correctly."
+        result=1
+    else
+        echo ".hiddenFile.txt was copied correctly."
+    fi
+
+    if ! ls -a "$TEST_BACKUP_DIR/subdir2/subdir2a" | grep -q ".hiddenFile.txt"; then
+        echo "Error: .hiddenFile.txt was not copied correctly."
+        result=1
+    else
+        echo ".hiddenFile2.txt was copied correctly."
+    fi
+
 
     checkResult "$result"
     echo
     clean
+
 }
 
 
@@ -261,6 +295,7 @@ function main() {
     testRegex # TESTE OPÇÃO REGEX
     backupDirInsideWorkDir # TESTE BACKUP_DIR DENTRO WORL_DIR
     test2Options # TESTE COM AS 3 OPÇÕES
+    hiddenFiles # TESTE FICHEIROS ESCONDIDOS
 
     echo
     echo "Number of tests performed: $TOTAL_TESTS"
