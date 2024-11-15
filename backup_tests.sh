@@ -78,7 +78,7 @@ function testIgnoreFiles() {
 
 function clean() {
     rm -f "$TEST_IGNORE_FILE"
-    rm "$RESULTS_FILE"
+    rm -f "$RESULTS_FILE"
     rm -rf "$TEST_WORK_DIR"
     rm -rf "$TEST_BACKUP_DIR"
 }
@@ -175,6 +175,34 @@ function testRegex() {
     fi
 }
 
+function backupDirInsideWorkDir() {
+    echo
+    ((TOTAL_TESTS++))
+    local result=0
+    
+    # criar diiretório backup dentro do trabalho
+    mkdir -p "$TEST_WORK_DIR/$TEST_BACKUP_DIR"
+    ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_WORK_DIR/$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+
+    str="Directory $TEST_WORK_DIR/$TEST_BACKUP_DIR is a subdirectory of $TEST_WORK_DIR!"
+    if grep -q "$str" "$RESULTS_FILE"; then
+        echo "$str"
+        echo "The backup was not performed"
+    else
+        echo "Error: The backup was not performed"
+        result=1
+    fi
+
+    if [[ "$result" -eq 0 ]]; then
+        echo "Test result: SUCCESS"
+        ((SUCCESS_TETS++))
+    else 
+        echo "Test result: FAILURE"
+        ((FAILURE_TESTS++))
+    fi
+
+}
+
 function main() {
 
     # TESTE FICHEIROS IGNORADOS
@@ -193,17 +221,24 @@ function main() {
     echo
 
     # TESTE OPÇÃO REGEX
-    echo "=== Testing Regex option (-r [regexpr]) ==="
+    echo "=== Testing regex option (-r [regexpr]) ==="
     setupWorkDir
     testRegex
-
     clean
-    
+    echo
+
+    # TESTE BACKUP_DIR DENTRO WORL_DIR
+    echo "=== Testing backup_dir inside work_dir ==="
+    setupWorkDir
+    backupDirInsideWorkDir
+    clean
+
     echo
     echo "Number of tests performed: $TOTAL_TESTS"
     echo "Number of successful tests: $SUCCESS_TETS"
     echo "Nmber of failed tests: $FAILURE_TESTS"
     echo
+    clean
 }
 
 main 
