@@ -60,7 +60,6 @@ function check() {
             continue
         fi
 
-
         local hash=($(md5sum "$file"))
         local hash_other=($(md5sum "$file_other"))
         
@@ -72,8 +71,12 @@ function check() {
 }   
 
 function main() {
+    shopt -s dotglob
+
     startupChecks "$@"
     check "$@"
+
+    shopt -u dotglob
 }
 
 main "$@"
