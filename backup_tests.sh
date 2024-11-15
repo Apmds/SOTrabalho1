@@ -4,6 +4,10 @@ TEST_WORK_DIR="test_work"
 TEST_BACKUP_DIR="test_backup"
 TEST_IGNORE_FILE="ignore_file.txt"
 RESULTS_FILE="test_results.txt"
+REGEX="file[0-9].txt"
+TOTAL_TESTS=0
+SUCCESS_TETS=0
+FAILURE_TESTS=0
 
 function generateRandomText() {
     local output_file="$1"
@@ -46,6 +50,8 @@ function setupIgnoreFiles() {
 }
 
 function testIgnoreFiles() {
+    ((TOTAL_TESTS++))
+    echo
     local result=0
     setupIgnoreFiles
     ./backup_summary.sh -b "$TEST_IGNORE_FILE" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
@@ -61,11 +67,17 @@ function testIgnoreFiles() {
     #echo "Backup summary:"
     #cat "$RESULTS_FILE"
     echo
-    [[ "$result" -eq 0 ]] && echo "Test result: SUCCESS" || echo "Test result: FAILURE"
+    if [[ "$result" -eq 0 ]]; then
+        echo "Test result: SUCCESS"
+        ((SUCCESS_TETS++))
+    else 
+        echo "Test result: FAILURE"
+        ((FAILURE_TESTS++))
+    fi
 }
 
 function clean() {
-    rm "$TEST_IGNORE_FILE"
+    rm -f "$TEST_IGNORE_FILE"
     rm "$RESULTS_FILE"
     rm -rf "$TEST_WORK_DIR"
     rm -rf "$TEST_BACKUP_DIR"
@@ -88,6 +100,8 @@ function removeBackup() {
 }
 
 function testChecking() {
+    ((TOTAL_TESTS++))
+    echo
     local result=0
     
     removeBackup
@@ -122,29 +136,74 @@ function testChecking() {
 
     rm -rf "$TEST_BACKUP_DIR"_before
     echo
-    [[ "$result" -eq 0 ]] && echo "Test result: SUCCESS" || echo "Test result: FAILURE"
+    if [[ "$result" -eq 0 ]]; then
+        echo "Test result: SUCCESS"
+        ((SUCCESS_TETS++))
+    else 
+        echo "Test result: FAILURE"
+        ((FAILURE_TESTS++))
+    fi
 
+}
+
+function testRegex() {  
+    ((TOTAL_TESTS++))
+    echo
+    local result=0
+    ./backup_summary.sh -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    local dirs=("$TEST_BACKUP_DIR" "$TEST_BACKUP_DIR/subdir1" "$TEST_BACKUP_DIR/subdir2" "$TEST_BACKUP_DIR/subdir2/subdir2a")
+    
+    for dir in "${dirs[@]}"; do
+        for file in "$dir"/*; do
+            if [[ -f "$file" ]]; then
+                if [[ ! "${file##*/}" =~ $REGEX ]]; then
+                echo "${file##*/} blabal"
+                    echo "Error: File $file does not match the regex."
+                    result=1
+                fi
+            fi
+        done
+    done
+    
+    if [[ "$result" -eq 0 ]]; then
+        echo "All files in $TEST_BACKUP_DIR check $REGEX"
+        echo "Test result: SUCCESS"
+        ((SUCCESS_TETS++))
+    else 
+        echo "Test result: FAILURE"
+        ((FAILURE_TESTS++))
+    fi
 }
 
 function main() {
 
     # TESTE FICHEIROS IGNORADOS
-    echo "=== Testing ignored files ==="
+    echo "=== Testing ignored files (-b [tfile]) ==="
     setupWorkDir
     setupIgnoreFiles
     testIgnoreFiles
     echo
+    clean
 
     # TESTE OPÇÃO CHECKING
-    echo "=== Testing checking option ==="
+    echo "=== Testing checking option (-c) ==="
     setupWorkDir # não parece que seja necessário
     testChecking 
+    clean
+    echo
 
-
-
-
+    # TESTE OPÇÃO REGEX
+    echo "=== Testing Regex option (-r [regexpr]) ==="
+    setupWorkDir
+    testRegex
 
     clean
+    
+    echo
+    echo "Number of tests performed: $TOTAL_TESTS"
+    echo "Number of successful tests: $SUCCESS_TETS"
+    echo "Nmber of failed tests: $FAILURE_TESTS"
+    echo
 }
 
 main 
