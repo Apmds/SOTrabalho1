@@ -140,13 +140,6 @@ function delete_dir() {
     dir_work="${dir_work%/*}"
     dir_work="${dir_work//$backupdir/$workdir}"
     dir_work="$dir_work/${dir##*/}"
-
-    num_files=$(ls -1q "$dir_work" | wc -l)
-    
-    if [[ "$num_files" -eq 0 ]]; then
-        summary "$dir_work"
-        return
-    fi
     
     for file in "$dir"/*; do
         #Ignorar ficheiros
@@ -160,6 +153,9 @@ function delete_dir() {
 
         # Diretório de backup vazio
         if [[ ! -e "$file" ]]; then
+            break
+        fi
+        if [ "$file" = "$dir"'/*' ]; then
             break
         fi
 

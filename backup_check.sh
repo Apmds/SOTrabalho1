@@ -60,7 +60,7 @@ function check() {
             continue
         fi
 
-        # Dá sempre igual?? Afinal não
+
         local hash=($(md5sum "$file"))
         local hash_other=($(md5sum "$file_other"))
         
