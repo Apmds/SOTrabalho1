@@ -133,7 +133,7 @@ function testChecking() {
     local result=0
     
     removeBackup
-    echo "Testing with no existing backup directory..."
+    echo "> Testing with no existing backup directory..."
     ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
 
     # o diretório de backup tem de continuar a não existir
@@ -150,7 +150,7 @@ function testChecking() {
     echo "Modifying $TEST_WORK_DIR..."
     modifyWorkDir
     echo
-    echo "Testing with an existing backup directory..."
+    echo "> Testing with an existing backup directory..."
     cp -r "$TEST_BACKUP_DIR" "$TEST_BACKUP_DIR"_before # diretorio temporário
     ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
 
@@ -330,7 +330,7 @@ function testFilesWithSpaces() {
 
 
 function testEmptyDirectories() {
-    echo "=== Testing files with spaces ==="
+    echo "=== Testing empty directories ==="
     echo
     ((TOTAL_TESTS++))
     local result=0
@@ -338,7 +338,7 @@ function testEmptyDirectories() {
     # primeiro teste com o diretório de trabalho vazio   
     rm -rf "$TEST_WORK_DIR"
     mkdir -p "$TEST_WORK_DIR"
-    echo "Testing with directory $TEST_WORK_DIR empty..."
+    echo "> Testing with directory $TEST_WORK_DIR empty..."
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
     if [[ -d "$TEST_BACKUP_DIR" && -z "$(ls -A $TEST_BACKUP_DIR)" ]]; then
         echo "The directory $TEST_BACKUP_DIR is empty."
@@ -350,7 +350,7 @@ function testEmptyDirectories() {
 
     # segundo teste com o diretório de trabalhocom subdiretórios vazios
     setupEmptyWorkDir
-    echo "Testing with directory $TEST_WORK_DIR with empty subdirectories..."
+    echo "> Testing with directory $TEST_WORK_DIR with empty subdirectories..."
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
 
     local dirs=( "$TEST_BACKUP_DIR/subdir1" "$TEST_BACKUP_DIR/subdir2" "$TEST_BACKUP_DIR/subdir2/anotherDir" "$TEST_BACKUP_DIR/subdir2/anotherDir/anotherDir2")
