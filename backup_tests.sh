@@ -57,6 +57,7 @@ function setupWorkDir() {
     generateRandomText "$TEST_WORK_DIR/subdir2/file2_subdir2.txt"
     # criar ficheiros dentro do subdiretório do diretório 2 
     generateRandomText "$TEST_WORK_DIR/subdir2/subdir2a/file1_subdir2a.txt"
+    echo "Work directory created."
 }
 
 function setupEmptyWorkDir() {
@@ -95,6 +96,7 @@ function testIgnoreFiles() {
     local result=0
     setupIgnoreFiles
     ./backup_summary.sh -b "$TEST_IGNORE_FILE" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh -b "$TEST_IGNORE_FILE" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     while IFS= read -r ignored_file; do
         if grep -q "Ignoring $ignored_file" "$RESULTS_FILE"; then
@@ -143,6 +145,7 @@ function testChecking() {
     removeBackup
     echo "> Testing with no existing backup directory..."
     ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     # o diretório de backup tem de continuar a não existir
     if [[ ! -d "$TEST_BACKUP_DIR"  ]]; then
@@ -152,16 +155,17 @@ function testChecking() {
         result=1
     fi
 
+    echo
+    echo "> Testing with an existing backup directory..."
     # criar o diretório de backup
     createBackup
+    echo "Backup directory created."
     # modificar o diretório de trabalho
     echo "Modifying $TEST_WORK_DIR..."
     modifyWorkDir
-    echo
-    echo "> Testing with an existing backup directory..."
     cp -r "$TEST_BACKUP_DIR" "$TEST_BACKUP_DIR"_before # diretorio temporário
     ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
-
+    echo "./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     if diff -r "$TEST_BACKUP_DIR" "$TEST_BACKUP_DIR"_before > "$RESULTS_FILE"; then
         echo "Backup directory was not modified during the check."
@@ -184,6 +188,7 @@ function testRegex() {
     echo
     local result=0
     ./backup_summary.sh -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
     local dirs=("$TEST_BACKUP_DIR" "$TEST_BACKUP_DIR/subdir1" "$TEST_BACKUP_DIR/subdir2" "$TEST_BACKUP_DIR/subdir2/subdir2a")
     
     for dir in "${dirs[@]}"; do
@@ -196,9 +201,9 @@ function testRegex() {
             fi
         done
     done
-    
+    echo
     if [[ "$result" -eq 0 ]]; then
-        echo "All files in $TEST_BACKUP_DIR check $REGEX"
+        echo "All files in $TEST_BACKUP_DIR check the regex expression: $REGEX"
         echo "Test result: SUCCESS"
         ((SUCCESS_TETS++))
     else 
@@ -219,16 +224,17 @@ function backupDirInsideWorkDir() {
     # criar diiretório backup dentro do trabalho
     mkdir -p "$TEST_WORK_DIR/$TEST_BACKUP_DIR"
     ./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_WORK_DIR/$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh -c "$TEST_WORK_DIR" "$TEST_WORK_DIR/$TEST_BACKUP_DIR" was executed."
 
     str="Directory $TEST_WORK_DIR/$TEST_BACKUP_DIR is a subdirectory of $TEST_WORK_DIR!"
     if grep -q "$str" "$RESULTS_FILE"; then
         echo "$str"
-        echo "The backup was not performed"
+        echo "The backup was not performed."
     else
-        echo "Error: The backup was not performed"
+        echo "Error: The backup was not performed."
         result=1
     fi
-
+    echo
     checkResult "$result"
     clean
     echo
@@ -244,6 +250,7 @@ function test2Options() {
     local result=0
 
     ./backup_summary.sh -b "$TEST_IGNORE_FILE" -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh -b "$TEST_IGNORE_FILE" -r "$REGEX" "$TEST_WORK_DIR" "$TEST_BACKUP_DIR"  was executed."
 
     while IFS= read -r ignored_file; do
         if grep -q "Ignoring $ignored_file" "$RESULTS_FILE"; then
@@ -267,7 +274,7 @@ function test2Options() {
             fi
         done
     done
-
+    echo
     checkResult "$result"
     echo
     clean
@@ -282,6 +289,7 @@ function testHiddenFiles() {
     addHiddenFiles
 
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     if ! ls -a "$TEST_BACKUP_DIR/subdir2" | grep -q ".hiddenFile.txt"; then
         echo "Error: .hiddenFile.txt was not copied correctly."
@@ -296,6 +304,7 @@ function testHiddenFiles() {
     else
         echo ".hiddenFile2.txt was copied correctly."
     fi
+    echo
     checkResult "$result"   
     echo
     clean
@@ -311,6 +320,7 @@ function testFilesWithSpaces() {
     addFilesWithSpaces
 
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     if [[ -e "$TEST_BACKUP_DIR/file 5.txt" ]]; then
         echo "File with spaces was copied correctly."
@@ -330,7 +340,7 @@ function testFilesWithSpaces() {
         echo "Error: Directory with spaces was not copied correctly."
         result=1
     fi
-
+    echo
     checkResult "$result"
     echo
     clean
@@ -348,6 +358,7 @@ function testEmptyDirectories() {
     mkdir -p "$TEST_WORK_DIR"
     echo "> Testing with directory $TEST_WORK_DIR empty..."
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
     if [[ -d "$TEST_BACKUP_DIR" && -z "$(ls -A $TEST_BACKUP_DIR)" ]]; then
         echo "The directory $TEST_BACKUP_DIR is empty."
     else
@@ -356,34 +367,30 @@ function testEmptyDirectories() {
     fi
     clean
 
-    # segundo teste com o diretório de trabalhocom subdiretórios vazios
+    # segundo teste com o diretório de trabalho com subdiretórios vazios
     setupEmptyWorkDir
     echo "> Testing with directory $TEST_WORK_DIR with empty subdirectories..."
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     local dirs=( "$TEST_BACKUP_DIR/subdir1" "$TEST_BACKUP_DIR/subdir2" "$TEST_BACKUP_DIR/subdir2/anotherDir" "$TEST_BACKUP_DIR/subdir2/anotherDir/anotherDir2")
     for dir in "${dirs[@]}"; do
         
         if [[ -d "$dir" ]]; then
-
             if [[ -z "$(ls -A "$dir")" ]]; then
-
                 echo "The directory $dir is completely empty."
-
             elif [[ -z "$(find "$dir" -maxdepth 1 -type f)" ]]; then
-
                 echo "The directory $dir contains only subdirectories."
             else
                 echo "Error: The directory $dir contains files."
                 result=1
             fi
-
         else
             echo "Error: The directory $dir does not exist."
             result=1
         fi
     done
-
+    echo
     checkResult "$result"
     echo
     clean
@@ -396,6 +403,7 @@ function testChangeBackupFile() {
     local result=0
     setupWorkDir
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
 
     # alterar conteúdo de um ficheiro no backup
     echo "Modifying content of file $TEST_BACKUP_DIR/subdir1/file4.txt..."
@@ -406,6 +414,7 @@ function testChangeBackupFile() {
     sleep 1
 
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    echo "./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" was executed."
     if grep -Fq "WARNING: backup entry test_backup/subdir1/file4.txt is newer than test_work/subdir1/file4.txt\; Should not happen" "$RESULTS_FILE"; then
         echo "Warning found."
     else
@@ -418,7 +427,7 @@ function testChangeBackupFile() {
         echo "Warning not found."
         result=1
     fi
-
+    echo
     checkResult "$result"
     echo
     clean   
@@ -437,6 +446,8 @@ function main() {
     testEmptyDirectories # TESTE DIRETÓRIOS VAZIOS
     testChangeBackupFile # TESTE ALTERAÇÃO FICHEIRO NO BACKUP
 
+    echo
+    echo "---- SUMMARY OF TESTS PERFORMED ----"
     echo
     echo "NUMBER OF TESTS PERFORMED: $TOTAL_TESTS"
     echo "NUMBER OF SUCCESSFUL TESTS: $SUCCESS_TETS"
