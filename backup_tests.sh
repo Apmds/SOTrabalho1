@@ -73,15 +73,23 @@ function setupEmptyWorkDir() {
 function setupIgnoreFiles() {
     # os ficheiro ignorados sao todos os file2
     rm -f "$TEST_IGNORE_FILE" && touch "$TEST_IGNORE_FILE"
+    if [[ -e "$TEST_IGNORE_FILE" ]]; then
+        echo "File $TEST_IGNORE_FILE created."
+    else
+        echo "Error: file $TEST_IGNORE_FILE not created."
+    fi
+    echo
     echo "$TEST_WORK_DIR/file2.txt" >> "$TEST_IGNORE_FILE"
     echo "$TEST_WORK_DIR/subdir1/file2_subdir1.txt" >> "$TEST_IGNORE_FILE"
     echo "$TEST_WORK_DIR/subdir2/file2_subdir2.txt" >> "$TEST_IGNORE_FILE"
+    echo "Files to ingnore: "
+    cat "$TEST_IGNORE_FILE"
+    echo
 }
 
 function testIgnoreFiles() {
     echo "=== Testing ignored files (-b [tfile]) ==="
     setupWorkDir
-    setupIgnoreFiles
     ((TOTAL_TESTS++))
     echo
     local result=0
@@ -390,7 +398,9 @@ function testChangeBackupFile() {
     ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
 
     # alterar conteúdo de um ficheiro no backup
+    echo "Modifying content of file $TEST_BACKUP_DIR/subdir1/file4.txt..."
     sleep 1
+    echo "Modifying content of file $TEST_BACKUP_DIR/subdir2/subdir2a/file1_subdir2a.txt..."
     touch "$TEST_BACKUP_DIR/subdir1/file4.txt"
     touch "$TEST_BACKUP_DIR/subdir2/subdir2a/file1_subdir2a.txt"
     sleep 1
