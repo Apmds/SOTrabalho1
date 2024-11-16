@@ -255,7 +255,7 @@ function backup() {
                     date_file=$(date -r "$file" +%s)
 
                     # Fazer o backup só se o ficheiro no backup é mais antigo
-                    if [[ date_backup -lt date_file ]]; then 
+                    if [[ "$date_backup" -lt "$date_file" ]]; then 
                         #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
                         #    echo a
                         #fi
@@ -271,9 +271,9 @@ function backup() {
                         [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
 
-                    if [[ date_backup -gt date_file ]]; then
+                    if [[ "$date_backup" -gt "$date_file" ]]; then
                         ((WARNINGS++))
-                        echo WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen
+                        echo "WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen"
                     fi
 
                 fi
