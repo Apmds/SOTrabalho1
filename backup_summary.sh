@@ -152,9 +152,6 @@ function delete_dir() {
         #fi
 
         # Diretório de backup vazio
-        if [[ ! -e "$file" ]]; then
-            break
-        fi
         if [ "$file" = "$dir"'/*' ]; then
             break
         fi
@@ -241,8 +238,25 @@ function backup() {
                 fi
             fi
         fi
-         
-        if [[ -f $file ]]; then
+        
+        # O diretório de trabalho está vazio
+        if [ "$file" = "$1"'/*' ]; then
+
+            #echo DIR TRABALHO: "$1"
+            #echo DIR BACKUP: "$2"
+
+            # Substituir o diretório de trabalho pelo diretório de backup
+            dir_backup="${file%/*}"
+            dir_backup="${dir_backup//$1/$2}"
+
+            if [[ ! -d "$dir_backup" ]]; then
+                echo mkdir -p "$dir_backup"
+                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; }
+            fi
+            break
+        fi
+
+        if [[ ! -d $file ]]; then
 
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
@@ -284,7 +298,7 @@ function backup() {
                 [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
             fi
 
-        elif [[ -d $file ]]; then
+        else
             #summary "$1"
             #É uma diretoria
             args_rec=("$@")
@@ -323,20 +337,7 @@ function backup() {
             DELETED=$local_DELETED
             SIZE_DELETED=$local_SIZE_DELETED
 
-        else
-            # O diretório de trabalho está vazio
-
-            #echo DIR TRABALHO: "$1"
-            #echo DIR BACKUP: "$2"
-
-            # Substituir o diretório de trabalho pelo diretório de backup
-            dir_backup="${file%/*}"
-            dir_backup="${dir_backup//$1/$2}"
-
-            if [[ ! -d "$dir_backup" ]]; then
-                echo mkdir -p "$dir_backup"
-                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; }
-            fi
+            
         fi
     done
 
