@@ -93,11 +93,13 @@ function main() {
             fi
         fi
 
-        #Ignorar ficheiros que verificam o regexpr
+        #Ignorar ficheiros que NÃO verificam o regexpr
         if [[ "$REGEX" -eq 0 ]]; then
-            if [[ "$file" =~ $EXPRESSION ]]; then
-                echo "Ignoring (regex) $file"
-                continue
+            if [[ ! -d "$file" ]]; then
+                if [[ ! "$file" =~ $EXPRESSION ]]; then
+                    echo "Ignoring (regex) $file."
+                    continue
+                fi
             fi
         fi
          
@@ -114,7 +116,7 @@ function main() {
                     date_file=$(date -r "$file" +%s)
 
                     # Fazer o backup só se o ficheiro no backup é mais antigo
-                    if [[ date_backup -lt date_file ]]; then 
+                    if [[ "$date_backup" -lt "$date_file" ]]; then 
                         #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
                         #    echo a
                         #fi
