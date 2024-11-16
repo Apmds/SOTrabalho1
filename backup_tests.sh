@@ -11,7 +11,7 @@ FAILURE_TESTS=0
 
 function generateRandomText() {
     local output_file="$1"
-    for i in {1..5}; do
+    for i in {1..2}; do
         head /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 20
         echo
     done > "$output_file"
@@ -381,6 +381,39 @@ function testEmptyDirectories() {
     clean
 }
 
+function testChangeBackupFile() {
+    echo "=== Testing file changes in backup ==="
+    echo
+    ((TOTAL_TESTS++))
+    local result=0
+    setupWorkDir
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+
+    # alterar conteúdo de um ficheiro no backup
+    sleep 1
+    touch "$TEST_BACKUP_DIR/subdir1/file4.txt"
+    touch "$TEST_BACKUP_DIR/subdir2/subdir2a/file1_subdir2a.txt"
+    sleep 1
+
+    ./backup_summary.sh "$TEST_WORK_DIR" "$TEST_BACKUP_DIR" > "$RESULTS_FILE"
+    if grep -Fq "WARNING: backup entry test_backup/subdir1/file4.txt is newer than test_work/subdir1/file4.txt\; Should not happen" "$RESULTS_FILE"; then
+        echo "Warning found."
+    else
+        echo "Warning not found."
+        result=1
+    fi
+    if grep -Fq "WARNING: backup entry test_backup/subdir2/subdir2a/file1_subdir2a.txt is newer than test_work/subdir2/subdir2a/file1_subdir2a.txt\; Should not happen" "$RESULTS_FILE"; then
+        echo "Warning found."
+    else
+        echo "Warning not found."
+        result=1
+    fi
+
+    checkResult "$result"
+    echo
+    clean   
+}
+
 
 function main() {
     
@@ -392,6 +425,7 @@ function main() {
     testHiddenFiles # TESTE FICHEIROS ESCONDIDOS
     testFilesWithSpaces # TESTE FICHEIROS COM ESPAÇOS
     testEmptyDirectories # TESTE DIRETÓRIOS VAZIOS
+    testChangeBackupFile # TESTE ALTERAÇÃO FICHEIRO NO BACKUP
 
     echo
     echo "NUMBER OF TESTS PERFORMED: $TOTAL_TESTS"
