@@ -433,6 +433,16 @@ function testChangeBackupFile() {
     clean   
 }
 
+function summaryOfTests() {
+    echo
+    echo "---- SUMMARY OF TESTS PERFORMED ----"
+    echo
+    echo "NUMBER OF TESTS PERFORMED: $TOTAL_TESTS"
+    echo "NUMBER OF SUCCESSFUL TESTS: $SUCCESS_TETS"
+    echo "NUMBER OF FAILED TESTS: $FAILURE_TESTS"
+    echo
+}
+
 
 function main() {
     
@@ -446,14 +456,7 @@ function main() {
     testEmptyDirectories # TESTE DIRETÓRIOS VAZIOS
     testChangeBackupFile # TESTE ALTERAÇÃO FICHEIRO NO BACKUP
 
-    echo
-    echo "---- SUMMARY OF TESTS PERFORMED ----"
-    echo
-    echo "NUMBER OF TESTS PERFORMED: $TOTAL_TESTS"
-    echo "NUMBER OF SUCCESSFUL TESTS: $SUCCESS_TETS"
-    echo "NUMBER OF FAILED TESTS: $FAILURE_TESTS"
-    echo
-
+    summaryOfTests
 }
 
 main 
