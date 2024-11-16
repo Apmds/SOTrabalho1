@@ -39,14 +39,22 @@ function startupChecks() {
 
 # Criar um array com os nomes dos ficheiros do dir_backup e no loop ir apagando os ficheiros do array que existirem no dir_trabalho. Depois apagar os ficheiros do array que restarem.
 function main() {
+    shopt -s dotglob # Ver ficheiros escondidos
+
     startupChecks "$@"
     
+    # Backup do diretório de trabalho
     for file in "$WORK_DIR"/*; do
+        # O diretório de trabalho está vazio
+        if [ "$file" = "$WORK_DIR"'/*' ]; then
+            break
+        fi
+
         if [[ -f $file ]]; then
             file_backup="${file//$WORK_DIR/$BACKUP_DIR}"
                 
             if [[ -e $file_backup ]]; then
-                if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
+                if [[ ! -d $file_backup ]]; then # Ficheiro que existe no backup
                     date_backup=$(date -r "$file_backup" +%s)
                     date_file=$(date -r "$file" +%s)
 
@@ -63,14 +71,27 @@ function main() {
         fi
     done
 
+    # Apagar os do backup que não existem no trabalho
     for file in "$BACKUP_DIR"/*; do
+        # O diretório de backup está vazio
+        if [ "$file" = "$BACKUP_DIR"'/*' ]; then
+            break
+        fi
+
+        # Ignorar se for uma diretoria
+        if [[ -d "$file" ]]; then
+            continue
+        fi
+
         file_work="${file//$BACKUP_DIR/$WORK_DIR}"
-        
-        if [[ ! -e $file_work ]]; then # Apagar ficheiro do backup se não existir no dir original
+
+        if [[ ! -e "$file_work" ]]; then # Apagar ficheiro do backup se não existir no dir original
             echo "rm $file"
             [[ "$CHECK" -eq 1 ]] && { rm $file ;}
         fi
     done
+
+    shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
 
 
