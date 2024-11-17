@@ -123,7 +123,7 @@ function startupChecks() {
 
 # informação para cada diretório
 function summary() {
-    echo -e "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ($SIZE_COPIED B); $DELETED Deleted ($SIZE_DELETED B)\n"
+    echo -e "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ("$SIZE_COPIED"B); $DELETED Deleted ("$SIZE_DELETED"B)\n"
 }
 
 function bigSummary() {
@@ -279,8 +279,8 @@ function backup() {
                         echo "cp -a "$file" "$file_backup""
 
                         ((UPDATED++)) # ficheiro do backup atualizado
-                        ((COPIED++))
-                        SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
+                        #((COPIED++))
+                        #SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
                         
                         [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
@@ -362,7 +362,7 @@ function main() {
 
     #delete_dir "$backupdir"
 
-    bigSummary "$workdir"
+    #bigSummary "$workdir"
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
 
