@@ -125,12 +125,12 @@ function startupChecks() {
     fi
 
     # Verificar se os diretórios não estão um dentro do outro
-    aux="${BACKUP_DIR#$WORK_DIR}" # Diretório substituido por o de backup
+    aux="${BACKUP_DIR#$WORK_DIR}" # Diretório de backup sem o de trabalho
     if [[ "$aux" != "$BACKUP_DIR" ]]; then
         throwError 4 $BACKUP_DIR $WORK_DIR
     fi
     
-    aux="${WORK_DIR#$BACKUP_DIR}" # Diretório substituido por o de backup
+    aux="${WORK_DIR#$BACKUP_DIR}" # Diretório de trabalho sem o de backup
     if [[ "$aux" != "$WORK_DIR" ]]; then
         throwError 4 $WORK_DIR $BACKUP_DIR
     fi
