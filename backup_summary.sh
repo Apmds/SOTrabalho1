@@ -169,7 +169,7 @@ function delete_dir() {
     for file in "$dir"/*; do
         #Ignorar ficheiros
         if [[ "$IGNORE" -eq 0 ]]; then
-            if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
+            if [[ "${IGNORED_FILES[$file]}" ]]; then #${file#*/}]
                 remove_file "$file"
                 continue
             fi
@@ -218,7 +218,7 @@ function backup() {
     for file in "$1"/*; do
         #Ignorar ficheiros
         if [[ "$IGNORE" -eq 0 ]]; then
-            if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
+            if [[ "${IGNORED_FILES[$file]}" ]]; then #${file#*/}]
                 echo "Ignoring $file."
                 continue
             fi
@@ -256,24 +256,18 @@ function backup() {
             file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
 
             if [[ -e $file_backup ]]; then
-                if [[ -f $file_backup ]]; then # Ficheiro que existe no backup
-                    date_backup=$(date -r "$file_backup" +%s)
-                    date_file=$(date -r "$file" +%s)
-
-                    # Fazer o backup só se o ficheiro no backup é mais antigo
-                    if [[ "$date_backup" -lt "$date_file" ]]; then
-                        echo "cp -a "$file" "$file_backup""
-
-                        ((UPDATED++)) # ficheiro do backup atualizado
-                        
-                        [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
-                    fi
-
-                    if [[ "$date_backup" -gt "$date_file" ]]; then
-                        ((WARNINGS++))
-                        echo "WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen"
-                    fi
-
+                date_backup=$(date -r "$file_backup" +%s)
+                date_file=$(date -r "$file" +%s)
+                # Fazer o backup só se o ficheiro no backup é mais antigo
+                if [[ "$date_backup" -lt "$date_file" ]]; then
+                    echo "cp -a "$file" "$file_backup""
+                    ((UPDATED++)) # ficheiro do backup atualizado
+                    
+                    [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
+                fi
+                if [[ "$date_backup" -gt "$date_file" ]]; then
+                    ((WARNINGS++))
+                    echo "WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen"
                 fi
             else # Ficheiro não existente no backup
                 echo "cp -a $file $file_backup"
