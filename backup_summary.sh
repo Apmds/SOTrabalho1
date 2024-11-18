@@ -113,9 +113,16 @@ function startupChecks() {
     fi
 
     # Obter nomes dos diretórios
-    WORK_DIR="${args[(($#-2))]%/*}"
-    BACKUP_DIR="${args[(($#-1))]%/*}"
+    WORK_DIR="${args[(($#-2))]}"
+    if [[ ${WORK_DIR: -1} == "/" ]]; then
+        WORK_DIR="${WORK_DIR%/}"
+    fi
     
+    BACKUP_DIR="${args[(($#-1))]}"
+    if [[ ${BACKUP_DIR: -1} == "/" ]]; then
+        BACKUP_DIR="${BACKUP_DIR%/}"
+    fi
+
     # Obter nomes dos ficheiros ignorados
     if [[ $IGNORE -eq 0 ]]; then
         declare -g -A IGNORED_FILES
