@@ -248,26 +248,38 @@ function backup() {
             break
         fi
 
-        if [[ ! -d $file ]]; then
-
+        if [[ ! -d "$file" ]]; then
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
             file_backup="${file_backup//$1/$2}" # Diretório substituido pelo de backup
             file_backup="$file_backup/${file##*/}" # Diretório de backup + ficheiro
 
-            if [[ -e $file_backup ]]; then
-                date_backup=$(date -r "$file_backup" +%s)
-                date_file=$(date -r "$file" +%s)
-                # Fazer o backup só se o ficheiro no backup é mais antigo
-                if [[ "$date_backup" -lt "$date_file" ]]; then
-                    echo "cp -a "$file" "$file_backup""
-                    ((UPDATED++)) # ficheiro do backup atualizado
-                    
+            if [[ -e "$file_backup" ]]; then
+                if [[ ! -d "$file_backup" ]]; then # Não diretório no backup
+                    date_backup=$(date -r "$file_backup" +%s)
+                    date_file=$(date -r "$file" +%s)
+                    # Fazer o backup só se o ficheiro no backup é mais antigo
+                    if [[ "$date_backup" -lt "$date_file" ]]; then
+                        echo "cp -a "$file" "$file_backup""
+                        ((UPDATED++)) # ficheiro do backup atualizado
+
+                        [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
+                    fi
+                    if [[ "$date_backup" -gt "$date_file" ]]; then
+                        ((WARNINGS++))
+                        echo "WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen"
+                    fi
+                
+                else # Diretório no backup com o nome do ficheiro
+
+                    # Remover o diretório completamente
+                    echo "rm -rf $file_backup"
+                    [[ "$CHECK" -eq 1 ]] && { rm -rf "$file_backup"; }
+
+                    echo "cp -a $file $file_backup"
+                    ((COPIED++))
+                    SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
                     [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
-                fi
-                if [[ "$date_backup" -gt "$date_file" ]]; then
-                    ((WARNINGS++))
-                    echo "WARNING: backup entry "$file_backup" is newer than "$file"\; Should not happen"
                 fi
             else # Ficheiro não existente no backup
                 echo "cp -a $file $file_backup"
