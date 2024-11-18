@@ -449,11 +449,11 @@ function main() {
     testIgnoreFiles # TESTE FICHEIROS IGNORADOS
     testChecking # TESTE OPÇÃO CHECKING
     testRegex # TESTE OPÇÃO REGEX
-    backupDirInsideWorkDir # TESTE BACKUP_DIR DENTRO WORL_DIR
+    backupDirInsideWorkDir # TESTE BACKUP_DIR DENTRO WORK_DIR
     test2Options # TESTE COM AS 3 OPÇÕES
     testHiddenFiles # TESTE FICHEIROS ESCONDIDOS
     testFilesWithSpaces # TESTE FICHEIROS COM ESPAÇOS
-    testEmptyDirectories # TESTE DIRETÓRIOS VAZIOS
+    testEmptyDirectories # TESTE DIRETORIAS VAZIAS
     testChangeBackupFile # TESTE ALTERAÇÃO FICHEIRO NO BACKUP
 
     summaryOfTests
