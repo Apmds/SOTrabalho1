@@ -27,7 +27,39 @@ function throwError() {
     exit $1
 }
 
+function check_errors() {
+    if [[ ! $? ]]; then
+        ((ERRORS++))
+        case "$1" in
+            1)
+                echo "ERROR: Couldn't create $2 directory!"
+            ;;
+
+            2)
+                echo "ERROR: Couldn't remove $2 file!"
+            ;;
+
+            3)
+                echo "ERROR: Couldn't remove $2 directory!"
+            ;;
+
+            4)
+                echo "ERROR: Couldn't make $2 directory!"
+            ;;
+
+            5)
+                echo "ERROR: Error copying $2!"
+            ;;
+
+            *)
+                echo "ERROR: Unknown error."
+            ;;
+        esac
+    fi
+}
+
 function startupChecks() {
+    set -o history -o histexpand
     
     if [[ $# -lt 2 ]]; then
         throwError 1
@@ -40,16 +72,22 @@ function startupChecks() {
 
     if [[ $# -ne 2 ]]; then
          for ((i=0; i < $#; i++)); do
-            #echo "${args[$i]}"
+            # Opção -c
             if [[ ${args[$i]} == "-c" && "$CHECK" -eq 1 ]]; then
                 CHECK=0
                 continue
             fi
+            
+            # Opção -b
             if [[ ${args[$i]} == "-b" && "$IGNORE" -eq 1 ]]; then
                 IGNORE=0
+
+                # Se o valor a seguir ao -b for um dos últimos, então há erro na sintaxe
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
                     throwError 1
                 fi
+
+                # Se o argumento for um ficheiro então passa um á frente
                 if [[ -f ${args[$(($i+1))]} ]]; then
                     IGNORE_FILE=${args[$(($i+1))]}
                     ((i++))
@@ -58,12 +96,17 @@ function startupChecks() {
                     throwError 3 ${args[$(($i+1))]}     # Ficheiro inválido
                 fi
             fi
+
+            # Opção -r
             if [[ ${args[$i]} == "-r" && "$REGEX" -eq 1 ]]; then
                 REGEX=0
                 
+                # Se o valor a seguir ao -r for um dos últimos, então há erro na sintaxe
                 if [[ $(($i+1)) > $(($#-3)) ]]; then
                     throwError 1
                 fi
+
+                # Obter a expressão regular e passar um á frente
                 EXPRESSION=${args[$(($i+1))]}
                 ((i++))
                 continue
@@ -99,16 +142,21 @@ function startupChecks() {
     [[ -d "$WORK_DIR" ]] || { throwError 2; }
     if [[ ! -d "$BACKUP_DIR" ]]; then
         echo "mkdir -p $BACKUP_DIR"
-        [[ "$CHECK" -eq 1 ]] && { mkdir -p "$BACKUP_DIR" ;}
+        [[ "$CHECK" -eq 1 ]] && { mkdir -p "$BACKUP_DIR" ; check_errors 1 "$BACKUP_DIR"; }
     fi
-
-
-
 }
 
-# informação para cada diretório
+# Informação para cada diretório
 function summary() {
     echo -e "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ("$SIZE_COPIED"B); $DELETED Deleted ("$SIZE_DELETED"B)\n"
+}
+
+# Remove um ficheiro
+function remove_file() {
+    ((DELETED++))
+    SIZE_DELETED=$((SIZE_DELETED + $(wc -c < "$1")))
+    echo "rm $1"
+    [[ "$CHECK" -eq 1 ]] && { rm "$1" ; check_errors 2 "$1"; }
 }
 
 function delete_dir() {
@@ -126,10 +174,7 @@ function delete_dir() {
         #Ignorar ficheiros
         if [[ "$IGNORE" -eq 0 ]]; then
             if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
-                ((DELETED++))
-                SIZE_DELETED=$((SIZE_DELETED + $(wc -c < "$file")))
-                echo "rm $file"
-                [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
+                remove_file "$file"
                 continue
             fi
         fi
@@ -149,14 +194,11 @@ function delete_dir() {
             if [[ -d "$file" ]]; then
                 delete_dir "$file"
                 echo "rmdir $file"
-                [[ "$CHECK" -eq 1 ]] && { rmdir "$file" ;}
+                [[ "$CHECK" -eq 1 ]] && { rmdir "$file" ; check_errors 3 "$file"; }
             fi
 
             if [[ -f "$file" ]]; then
-                ((DELETED++))
-                SIZE_DELETED=$((SIZE_DELETED + $(wc -c < "$file")))
-                echo "rm $file"
-                [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
+                remove_file "$file"
             fi
         fi
     done
@@ -169,7 +211,6 @@ function delete_dir() {
 }
 
 function backup() {
-
     ERRORS=0
     WARNINGS=0
     UPDATED=0
@@ -180,7 +221,6 @@ function backup() {
 
     for file in "$1"/*; do
         #Ignorar ficheiros
-        #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
             if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
                 echo "Ignoring $file."
@@ -207,7 +247,7 @@ function backup() {
 
             if [[ ! -d "$dir_backup" ]]; then
                 echo mkdir -p "$dir_backup"
-                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; }
+                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$dir_backup"; check_errors 4 "$dir_backup"; }
             fi
             break
         fi
@@ -232,7 +272,7 @@ function backup() {
 
                         ((UPDATED++)) # ficheiro do backup atualizado
                         
-                        [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
+                        [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
                     fi
 
                     if [[ "$date_backup" -gt "$date_file" ]]; then
@@ -245,7 +285,7 @@ function backup() {
                 echo "cp -a $file $file_backup"
                 ((COPIED++))
                 SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
-                [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
+                [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ; check_errors 5 "$file"; }
             fi
 
         else
@@ -262,10 +302,10 @@ function backup() {
             # Criar diretório no backup se não existe
             if [[ ! -e "$file_backup" ]]; then
                 echo mkdir -p "$file_backup"
-                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$file_backup" ;}
+                [[ "$CHECK" -eq 1 ]] && { mkdir -p "$file_backup" ; check_errors 4 "$file_backup"; }
             fi
             
-            # Salvar valores
+            # Salvar valores de sumário
             local local_ERRORS=$ERRORS
             local local_WARNINGS=$WARNINGS
             local local_UPDATED=$UPDATED
@@ -276,7 +316,7 @@ function backup() {
 
             backup "${args_rec[@]}"
 
-            # Restaurar valores
+            # Restaurar valores de sumário
             ERRORS=$local_ERRORS
             WARNINGS=$local_WARNINGS
             UPDATED=$local_UPDATED
@@ -284,8 +324,6 @@ function backup() {
             SIZE_COPIED=$local_SIZE_COPIED
             DELETED=$local_DELETED
             SIZE_DELETED=$local_SIZE_DELETED
-
-            
         fi
     done
 
