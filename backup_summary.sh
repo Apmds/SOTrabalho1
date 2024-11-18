@@ -1,22 +1,4 @@
 #!/bin/bash
-# Quem fez o quê?
-# Explicar os testes que fizeram e porquê
-# EXplicar a solução e a estrutura do código
-# Bibliografia
-
-# Os nomes dos ficheiros no -b podem ser só nomes, para ignorar todos os ficheiros com esse nome ou podem ter o caminho, para ignorar apenas esse ficheiro.
-# UPDATED=0
-# COPIED=0
-# SIZE=0
-# DELITED=0
-
-TOTAL_ERRORS=0
-TOTAL_WARNINGS=0
-TOTAL_UPDATED=0
-TOTAL_COPIED=0
-TOTAL_SIZE_COPIED=0
-TOTAL_DELETED=0
-TOTAL_SIZE_DELETED=0
 
 function throwError() {
     ((ERRORS++))
@@ -96,10 +78,10 @@ function startupChecks() {
             IGNORED_FILES["$line"]=0
         done < <(grep "" $IGNORE_FILE)
     fi
-    
+
     # Obter nomes dos diretórios
-    WORK_DIR=${args[(($#-2))]}
-    BACKUP_DIR=${args[(($#-1))]}
+    WORK_DIR="${args[(($#-2))]%/*}"
+    BACKUP_DIR="${args[(($#-1))]%/*}"
     
 
     # Verificar se os diretórios não estão um dentro do outro
@@ -119,15 +101,14 @@ function startupChecks() {
         echo "mkdir -p $BACKUP_DIR"
         [[ "$CHECK" -eq 1 ]] && { mkdir -p "$BACKUP_DIR" ;}
     fi
+
+
+
 }
 
 # informação para cada diretório
 function summary() {
     echo -e "While backuping "$1": $ERRORS Errors; $WARNINGS Warnings; $UPDATED Updated; $COPIED Copied ("$SIZE_COPIED"B); $DELETED Deleted ("$SIZE_DELETED"B)\n"
-}
-
-function bigSummary() {
-    echo "While backuping "$1": $TOTAL_ERRORS Errors; $TOTAL_WARNINGS Warnings; $TOTAL_UPDATED Updated; $TOTAL_COPIED Copied ($TOTAL_SIZE_COPIED B); $TOTAL_DELETED Deleted ($TOTAL_SIZE_DELETED B)"
 }
 
 function delete_dir() {
@@ -143,22 +124,20 @@ function delete_dir() {
     
     for file in "$dir"/*; do
         #Ignorar ficheiros
-        #Se eles tiverem no backup têm de ser apagados??
-        #if [[ "$IGNORE" -eq 0 ]]; then
-        #    if [[ "${IGNORED_FILES[${file##*/}]}" ]]; then
-        #        echo "Ignoring $file."
-        #        continue
-        #    fi
-        #fi
+        if [[ "$IGNORE" -eq 0 ]]; then
+            if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
+                ((DELETED++))
+                SIZE_DELETED=$((SIZE_DELETED + $(wc -c < "$file")))
+                echo "rm $file"
+                [[ "$CHECK" -eq 1 ]] && { rm "$file" ;}
+                continue
+            fi
+        fi
 
         # Diretório de backup vazio
         if [ "$file" = "$dir"'/*' ]; then
             break
         fi
-
-        #if [[ -d "$file" ]]; then
-        #    delete_dir "$file"
-        #fi
 
         # Substituir o diretório de trabalho pelo diretório de backup
         file_work="${file%/*}"
@@ -182,23 +161,11 @@ function delete_dir() {
         fi
     done
 
-    updateTotalVariables
-
     if [ "$dir" != "$backupdir" ]; then
         summary "$dir_work"
     else
         summary "$workdir"
     fi
-}
-
-function updateTotalVariables() {
-    TOTAL_ERRORS=$((TOTAL_ERRORS + $ERRORS))
-    TOTAL_WARNINGS=$((TOTAL_WARNINGS + $WARNINGS))
-    TOTAL_UPDATED=$((TOTAL_UPDATED + $UPDATED))
-    TOTAL_COPIED=$((TOTAL_COPIED + $COPIED))
-    TOTAL_SIZE_COPIED=$((TOTAL_SIZE_COPIED + $SIZE_COPIED))
-    TOTAL_DELETED=$((TOTAL_DELETED + $DELETED))
-    TOTAL_SIZE_DELETED=$((TOTAL_SIZE_DELETED + $SIZE_DELETED))
 }
 
 function backup() {
@@ -211,19 +178,11 @@ function backup() {
     DELETED=0
     SIZE_DELETED=0
 
-    #num_files=$(ls -1q "$WORK_DIR" | wc -l)
-    #
-    #if [[ "$num_files" -eq 0 ]]; then
-    #    return
-    #fi
-
     for file in "$1"/*; do
-        #echo "dir1 $1"
-        #echo "dir2 $2"
         #Ignorar ficheiros
         #Se eles tiverem no backup têm de ser apagados??
         if [[ "$IGNORE" -eq 0 ]]; then
-            if [[ "${IGNORED_FILES[$file]}" ]]; then #${file##*/}]
+            if [[ "${IGNORED_FILES[$file]}" || "${IGNORED_FILES[${file#*/}]}" ]]; then #${file#*/}]
                 echo "Ignoring $file."
                 continue
             fi
@@ -241,9 +200,6 @@ function backup() {
         
         # O diretório de trabalho está vazio
         if [ "$file" = "$1"'/*' ]; then
-
-            #echo DIR TRABALHO: "$1"
-            #echo DIR BACKUP: "$2"
 
             # Substituir o diretório de trabalho pelo diretório de backup
             dir_backup="${file%/*}"
@@ -270,17 +226,11 @@ function backup() {
 
                     # Fazer o backup só se o ficheiro no backup é mais antigo
                     if [[ "$date_backup" -lt "$date_file" ]]; then 
-                        #if [[ "$IGNORE" -eq 1 && $IGNORE_FILE ]] then
-                        #    echo a
-                        #fi
-
                         ## COLORCAR TEXTO DE CRIAR DIRETÓRIO
 
                         echo "cp -a "$file" "$file_backup""
 
                         ((UPDATED++)) # ficheiro do backup atualizado
-                        #((COPIED++))
-                        #SIZE_COPIED=$((SIZE_COPIED + $(wc -c < "$file")))
                         
                         [[ "$CHECK" -eq 1 ]] && { cp -a "$file" "$file_backup" ;}
                     fi
@@ -299,12 +249,10 @@ function backup() {
             fi
 
         else
-            #summary "$1"
             #É uma diretoria
             args_rec=("$@")
             args_rec[-2]="$file"
             args_rec[-1]="$2/${file#$1/}"
-            #echo "${args_rec[@]}"
             
             # Substituir o diretório de trabalho pelo diretório de backup
             file_backup="${file%/*}" # Diretório
@@ -350,19 +298,12 @@ function main() {
     shopt -s dotglob # Ver ficheiros escondidos
 
     startupChecks "$@"
-    #echo "Ignored files: ${IGNORED_FILES[@]}"
-    #echo "$EXPRESSION"
 
     local workdir="$WORK_DIR"
     local backupdir="$BACKUP_DIR"
 
     backup "$workdir" "$backupdir"
-    #updateTotalVariables
-    #summary "${args_rec[0]}"
 
-    #delete_dir "$backupdir"
-
-    #bigSummary "$workdir"
     shopt -u dotglob # Parar de poder ver ficheiros escondidos
 }
 
