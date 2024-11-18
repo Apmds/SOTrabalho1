@@ -450,7 +450,7 @@ function main() {
     testChecking # TESTE OPÇÃO CHECKING
     testRegex # TESTE OPÇÃO REGEX
     backupDirInsideWorkDir # TESTE BACKUP_DIR DENTRO WORK_DIR
-    test2Options # TESTE COM AS 3 OPÇÕES
+    test2Options # TESTE COM 2 OPÇÕES
     testHiddenFiles # TESTE FICHEIROS ESCONDIDOS
     testFilesWithSpaces # TESTE FICHEIROS COM ESPAÇOS
     testEmptyDirectories # TESTE DIRETORIAS VAZIAS
