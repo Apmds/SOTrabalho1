@@ -58,9 +58,7 @@ function check_errors() {
     fi
 }
 
-function startupChecks() {
-    set -o history -o histexpand
-    
+function startupChecks() {    
     if [[ $# -lt 2 ]]; then
         throwError 1
     fi
@@ -114,18 +112,17 @@ function startupChecks() {
         done
     fi
 
-    # Obter nomes dos ficheiros ignorados
-    if [[ $IGNORE -eq 0 ]]; then
-        declare -g -A IGNORED_FILES
-        while IFS= read -r line; do
-            IGNORED_FILES["$line"]=0
-        done < <(grep "" $IGNORE_FILE)
-    fi
-
     # Obter nomes dos diretórios
     WORK_DIR="${args[(($#-2))]%/*}"
     BACKUP_DIR="${args[(($#-1))]%/*}"
     
+    # Obter nomes dos ficheiros ignorados
+    if [[ $IGNORE -eq 0 ]]; then
+        declare -g -A IGNORED_FILES
+        while IFS= read -r line; do            
+            IGNORED_FILES["$line"]=0
+        done < <(grep "" $IGNORE_FILE)
+    fi
 
     # Verificar se os diretórios não estão um dentro do outro
     aux="${BACKUP_DIR#$WORK_DIR}" # Diretório substituido por o de backup
@@ -162,7 +159,6 @@ function remove_file() {
 function delete_dir() {
     local file
 
-    
     local dir=$1
     local dir_work=$1
 
@@ -265,9 +261,7 @@ function backup() {
                     date_file=$(date -r "$file" +%s)
 
                     # Fazer o backup só se o ficheiro no backup é mais antigo
-                    if [[ "$date_backup" -lt "$date_file" ]]; then 
-                        ## COLORCAR TEXTO DE CRIAR DIRETÓRIO
-
+                    if [[ "$date_backup" -lt "$date_file" ]]; then
                         echo "cp -a "$file" "$file_backup""
 
                         ((UPDATED++)) # ficheiro do backup atualizado
