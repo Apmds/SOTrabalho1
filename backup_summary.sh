@@ -20,7 +20,7 @@ function throwError() {
         ;;
         
         *)
-            echo "Não sei o que aconteceu! Tu sabes?"
+            echo "Something went wrong!"
         ;;
     esac
 
